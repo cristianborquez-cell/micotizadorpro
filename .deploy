@@ -1,5 +1,6 @@
-deploy-trigger-1795304357286
-# Force redeploy - 2026-11-21T23:39:17.286Z
+deploy-trigger-1795304393223
+# Force redeploy - 2026-11-21T23:39:53.223Z
 # Updated do_GET to serve /admin and android_login.html
 # Fix Origin validation for HTTPS
 # Fix: accept both http and https origins
+# Fix: update ROOT path
