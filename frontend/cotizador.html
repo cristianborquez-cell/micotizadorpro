@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cotizador Pro Híbrido V3.2 Local | Diseñado por Cristian Borquez</title>
+    <meta name="theme-color" content="#0B2A4A">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Cotizador Pro">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1041/1041883.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1041/1041883.png">
+    
+    <script src="/assets/jspdf.umd.min.js"></script>
+    <script src="/assets/html2canvas.min.js"></script>
+    
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+        body{background:linear-gradient(135deg,#0B2A4A,#087EBD);min-height:100vh;padding:10px;color:#fff;transition:background 0.3s,color 0.3s}
+        body.dark{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#ddd}
+        body.dark .card{background:#2d2d44;color:#eee}
+        body.dark .card h2{color:#8ab4f8;border-bottom-color:#444}
+        body.dark input,body.dark select,body.dark textarea{background:#3a3a5a;border-color:#555;color:#fff}
+        body.dark .btn-primary{background:linear-gradient(135deg,#4a6fa5,#2a4a7f)}
+        body.dark .resumen-final{background:#1e2a3a}
+        body.dark .total-row{color:#8ab4f8}
+        body.dark .tab{background:#3a3a4a;color:#ccc}
+        body.dark .tab.activa{background:#4a6fa5;color:#fff}
+        body.dark table th{background:#3a3a5a;color:#8ab4f8}
+        body.dark table td{border-bottom-color:#444;color:#eee}
+        body.dark .historial-item:hover{background:#3a3a5a}
+        body.dark .toggle-dark{background:rgba(0,0,0,0.4)}
+        body.dark label{color:#bbb}
+        body.dark .plantilla-item{background:#3a3a5a;border-color:#555}
+        body.dark .stat-card{background:#2d2d44;border-color:#444}
+        body.dark .autosave-indicator{background:#3a3a5a;color:#8ab4f8}
+        body.dark .notas-internas{background:#3a3a5a;border-color:#555}
+        body.dark .descuento-badge{background:#5a3a3a}
+        
+        .container{max-width:100%;margin:0 auto}
+        h1{text-align:center;font-size:1.2rem;margin-bottom:5px}
+        .subtitle{text-align:center;margin-bottom:12px;opacity:0.9;font-size:0.85rem}
+        .card{background:#fff;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);color:#222;transition:background 0.3s}
+        h2{color:#0B2A4A;margin-bottom:10px;font-size:0.95rem;border-bottom:2px solid #eee;padding-bottom:6px;transition:color 0.3s}
+        .form-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+        .form-group{flex:1;min-width:130px}
+        label{display:block;margin-bottom:4px;font-weight:600;color:#444;font-size:0.8rem;transition:color 0.3s}
+        input,select,textarea{width:100%;padding:10px 8px;border:2px solid #ddd;border-radius:8px;font-size:16px;background-color:#fff;color:#000;transition:background 0.3s,border-color 0.3s,color 0.3s}
+        input:focus,select:focus{outline:none;border-color:#087EBD}
+        button{padding:10px 12px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;transition:background 0.2s,transform 0.1s}
+        button:active{transform:scale(0.98)}
+        .btn-primary{background:linear-gradient(135deg,#0B2A4A,#087EBD);color:#fff}
+        .btn-success{background:#16A56A;color:#fff}
+        .btn-danger{background:#D64545;color:#fff}
+        .btn-warning{background:#F5A400;color:#fff}
+        .btn-secondary{background:#536273;color:#fff}
+        .btn-info{background:#087EBD;color:#fff}
+        .btn-sm{padding:6px 10px;font-size:0.85rem}
+        .btn-block{width:100%;padding:12px;font-size:1rem;margin-top:8px}
+        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:0.85rem}
+        th,td{padding:8px 5px;text-align:left;border-bottom:1px solid #eee}
+        th{background:#f5f5f5;color:#0B2A4A;font-weight:700}
+        td{color:#222}
+        .resumen-final{background:linear-gradient(135deg,#EAF6FB,#DDF1F8);padding:12px;border-radius:10px;margin-top:12px;transition:background 0.3s}
+        .total-row{font-size:1.1rem;font-weight:700;color:#0B2A4A}
+        .tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+        .tab{padding:8px 12px;border-radius:8px;cursor:pointer;background:#e0e0e0;color:#444;font-weight:600;font-size:0.9rem;transition:background 0.3s,color 0.3s}
+        .tab.activa{background:#0B2A4A;color:#fff}
+        .seccion{display:none}
+        .seccion.visible{display:block}
+        .buscador{margin-bottom:12px;position:relative}
+        .buscador input{padding-left:36px}
+        .buscador-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#888}
+        .toggle-dark{cursor:pointer;background:rgba(255,255,255,0.2);border-radius:20px;padding:6px 12px;font-size:0.8rem;border:none;color:#fff;margin-left:auto}
+        .historial-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;flex-wrap:wrap;gap:8px}
+        .historial-item:hover{background:#f5f5f5}
+        .acciones-historial{display:flex;gap:6px;flex-wrap:wrap}
+        
+        .btn-auto-search {
+            background: linear-gradient(135deg, #079B78, #19B36B);
+            color: #fff;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        .btn-auto-search:disabled { opacity: 0.6; cursor: not-allowed; }
+        .campo-servicio { background: #EEF8F6; padding: 10px; border-radius: 8px; margin-top: 8px; display: none; }
+        .campo-servicio.visible { display: block; }
+        .campo-producto { display: block; }
+        .error-precio { color: #d9534f; font-size: 0.85rem; margin-top: 4px; display: none; font-weight: bold; }
+        .error-precio.visible { display: block; }
+        .config-box { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.8rem; color: #333; border: 1px dashed #ccc; }
+        #pdfRenderBox {
+            background: #ffffff;
+            color: #000000;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            width: 750px;
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+        #pdfRenderBox h2 { color: #0B2A4A; font-size: 22px; border-bottom: 2px solid #0B2A4A; padding-bottom: 5px; margin-bottom: 15px; }
+        #pdfRenderBox .header-grid { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; line-height: 1.5; }
+        #pdfRenderBox table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+        #pdfRenderBox th { background-color: #0B2A4A; color: #ffffff; padding: 8px; text-align: left; }
+        #pdfRenderBox td { padding: 8px; border-bottom: 1px solid #ddd; color: #333; }
+        #pdfRenderBox .resumen-box { float: right; width: 250px; font-size: 13px; line-height: 1.8; text-align: right; }
+        #pdfRenderBox .resumen-box .total { font-size: 16px; font-weight: bold; color: #0B2A4A; border-top: 2px solid #0B2A4A; padding-top: 4px; }
+        .brand-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;margin-bottom:8px;background:rgba(7,36,64,.92);border:1px solid rgba(255,255,255,.14);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+        .brand{display:flex;align-items:center;gap:12px}
+        .brand-logo{width:58px;height:58px;border-radius:15px;background:linear-gradient(145deg,#087EBD,#0B2A4A);border:2px solid rgba(245,164,0,.85);position:relative;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+        .brand-sun{position:absolute;top:1px;left:5px;color:#F5A400;font-size:25px;line-height:1}
+        .brand-panel{font-size:42px;color:#fff;transform:rotate(-10deg) translateY(7px);text-shadow:0 2px 8px rgba(0,0,0,.25)}
+        .brand h1{margin:0;text-align:left;font-size:1.35rem;letter-spacing:.4px;color:#fff}
+        .brand h1 span{color:#F5A400}
+        .brand-tagline{margin-top:3px;color:#D9EDF7;font-size:.72rem;letter-spacing:1.8px}
+        .brand-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+        .country-badge{font-weight:700;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);padding:7px 10px;border-radius:20px;font-size:.8rem}
+        .version-badge{font-weight:700;color:#F5A400;background:rgba(245,164,0,.15);border:1px solid rgba(245,164,0,.4);padding:7px 10px;border-radius:20px;font-size:.75rem}
+        .card{border:1px solid rgba(11,42,74,.08);box-shadow:0 7px 22px rgba(11,42,74,.12)}
+        .tab{border:1px solid #D7E2EA}
+        .tab.activa{box-shadow:0 4px 12px rgba(8,126,189,.25)}
+        .btn-primary,.btn-success,.btn-warning,.btn-danger,.btn-secondary,.btn-info{box-shadow:0 3px 9px rgba(0,0,0,.10)}
+        .resumen-final{border:1px solid #CFE7EF}
+        .copyright-footer{margin:14px 0 4px;padding:14px 16px;border-radius:14px;background:#071F38;color:#DCEAF3;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.74rem;line-height:1.55}
+        .copyright-brand{font-weight:800;color:#fff;letter-spacing:.3px}
+        .copyright-brand b{color:#F5A400}
+        .cb-mark{width:42px;height:42px;border:2px solid #F5A400;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:18px}
+        
+        /* === NUEVOS ESTILOS V2.4 === */
+        .autosave-indicator{
+            display:inline-flex;align-items:center;gap:6px;
+            padding:5px 10px;border-radius:15px;font-size:.75rem;font-weight:600;
+            background:#EAF6FB;color:#0B2A4A;
+        }
+        .autosave-indicator.saving{background:#FFF3CD;color:#856404;animation:pulse 1s infinite}
+        .autosave-indicator.saved{background:#D4EDDA;color:#155724}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        
+        .plantillas-section{margin-top:10px}
+        .plantillas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:8px}
+        .plantilla-item{
+            background:#f8fbfd;border:1px solid #d7e2ea;border-radius:8px;padding:10px;
+            cursor:pointer;transition:all .2s;font-size:.85rem;
+        }
+        .plantilla-item:hover{border-color:#087EBD;background:#EAF6FB;transform:translateY(-2px)}
+        .plantilla-item strong{display:block;color:#0B2A4A;margin-bottom:4px}
+        .plantilla-item small{color:#536273;display:block}
+        .plantilla-item .plantilla-actions{display:flex;gap:4px;margin-top:6px}
+        
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+        .stat-card{
+            background:linear-gradient(135deg,#f8fbfd,#fff);
+            border:1px solid #d7e2ea;border-radius:10px;padding:12px;text-align:center;
+        }
+        .stat-value{font-size:1.4rem;font-weight:900;color:#0B2A4A}
+        .stat-label{font-size:.75rem;color:#536273;margin-top:4px;font-weight:600}
+        .stat-card.primary .stat-value{color:#087EBD}
+        .stat-card.success .stat-value{color:#16A56A}
+        .stat-card.warning .stat-value{color:#F5A400}
+        .stat-card.info .stat-value{color:#536273}
+        
+        .notas-internas{
+            background:#FFF8E1;border:1px dashed #F5A400;border-radius:8px;
+            padding:10px;margin-top:8px;
+        }
+        .notas-internas label{color:#856404}
+        .notas-internas textarea{background:#fff;border-color:#FFE082;font-size:.85rem}
+        
+        .descuento-row{background:#FFF5F5;padding:6px 8px;border-radius:6px;margin-top:4px}
+        .descuento-badge{
+            display:inline-block;background:#F8D7DA;color:#721C24;
+            padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:700;
+        }
+        
+        .item-editable{cursor:pointer;transition:background .2s}
+        .item-editable:hover{background:#EAF6FB}
+        .editing-indicator{
+            background:#FFF3CD;padding:8px;border-radius:6px;margin-bottom:8px;
+            font-size:.85rem;color:#856404;font-weight:600;display:none;
+        }
+        .editing-indicator.visible{display:block}
+        
+        .usd-display{font-size:.75rem;color:#536273;margin-top:2px;font-weight:500}
+        .action-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+        
+        .modal-overlay{
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;
+            z-index:9999;padding:20px;
+        }
+        .modal-overlay.visible{display:flex}
+        .modal{
+            background:#fff;border-radius:12px;padding:20px;max-width:500px;width:100%;
+            max-height:90vh;overflow-y:auto;color:#222;
+        }
+        .modal h3{color:#0B2A4A;margin-bottom:12px}
+        
+        @media(max-width:650px){
+            .brand-header{align-items:flex-start}
+            .brand h1{font-size:1.02rem}
+            .brand-logo{width:50px;height:50px}
+            .brand-actions{flex-direction:column;align-items:flex-end}
+            .copyright-footer{align-items:flex-start}
+            .cb-mark{flex:none}
+            .stats-grid{grid-template-columns:repeat(2,1fr)}
+        }
+        
+        /* V2.1 — Estilo Profesional + Premium */
+        .quote-style-card{background:linear-gradient(135deg,#f8fbfd,#eef8f6);border:1px solid #cfe7ef;border-radius:12px;padding:12px;margin-bottom:12px;color:#0B2A4A}
+        .quote-style-grid{display:flex;gap:8px;flex-wrap:wrap}
+        .style-option{flex:1;min-width:150px;position:relative}
+        .style-option input{position:absolute;opacity:0;pointer-events:none}
+        .style-option label{display:block;margin:0;padding:10px 12px;border:2px solid #d7e2ea;border-radius:10px;background:#fff;cursor:pointer;font-weight:700;color:#0B2A4A;text-align:center}
+        .style-option input:checked + label{border-color:#087EBD;background:#eaf6fb;box-shadow:0 3px 10px rgba(8,126,189,.14)}
+        .pdf-cover{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px;border-radius:14px;background:linear-gradient(135deg,#071f38 0%,#0B2A4A 58%,#087EBD 100%);color:#fff;margin-bottom:18px}
+        .pdf-brand-lockup{display:flex;align-items:center;gap:12px}
+        .pdf-logo-mark{width:58px;height:58px;border-radius:15px;border:2px solid #F5A400;background:linear-gradient(145deg,#087EBD,#0B2A4A);display:grid;place-items:center;position:relative;overflow:hidden;font-weight:900;font-size:18px}
+        .pdf-logo-mark:before{content:'☀';position:absolute;top:2px;left:6px;color:#F5A400;font-size:22px}
+        .pdf-logo-mark:after{content:'▱';color:#fff;font-size:38px;transform:rotate(-10deg) translateY(7px)}
+        .pdf-brand-name{font-size:19px;font-weight:900;letter-spacing:.5px}
+        .pdf-brand-name span{color:#F5A400}
+        .pdf-brand-sub{font-size:9px;letter-spacing:1.5px;color:#d9edf7;margin-top:3px}
+        .pdf-doc-badge{min-width:125px;text-align:right;font-size:10px;line-height:1.6}
+        .pdf-doc-badge strong{font-size:16px;color:#F5A400}
+        .pdf-info-card{padding:13px 15px;border:1px solid #d7e2ea;border-radius:10px;background:#f8fbfd;margin-bottom:16px}
+        .pdf-info-title{font-size:10px;color:#087EBD;font-weight:900;letter-spacing:.8px;margin-bottom:5px}
+        .pdf-energy-box{margin-top:22px;padding:18px 20px;border-radius:14px;background:linear-gradient(135deg,#071f38,#0B2A4A 60%,#087EBD);color:#fff;display:flex;align-items:center;gap:16px}
+        .pdf-family-art{width:86px;height:70px;flex:0 0 86px;position:relative}
+        .pdf-family-art .person,.pdf-family-art .child{position:absolute;bottom:0;border-radius:50%;background:#F5A400}
+        .pdf-family-art .person{width:30px;height:30px;left:14px}
+        .pdf-family-art .person:after{content:'';position:absolute;width:42px;height:32px;background:#087EBD;border-radius:18px 18px 8px 8px;left:-6px;top:26px}
+        .pdf-family-art .child{width:22px;height:22px;left:53px;bottom:5px}
+        .pdf-family-art .child:after{content:'';position:absolute;width:31px;height:25px;background:#16A56A;border-radius:15px 15px 6px 6px;left:-4px;top:19px}
+        .pdf-energy-title{font-size:16px;font-weight:900}
+        .pdf-energy-copy{font-size:10px;opacity:.92;line-height:1.5;margin-top:4px}
+        .pdf-validity-badge{display:inline-block;margin-top:6px;padding:5px 8px;border-radius:7px;background:rgba(245,164,0,.16);border:1px solid rgba(245,164,0,.5);color:#8a5a00;font-weight:800;font-size:10px}
+        .pdf-style-professional .pdf-energy-box{display:none}
+        .pdf-style-premium .pdf-info-card{border-color:#b9dce9}
+        .pdf-style-professional-premium .pdf-info-card{box-shadow:0 3px 10px rgba(11,42,74,.06)}
+        .pdf-premium-note{margin-top:14px;padding:11px 13px;border-left:4px solid #F5A400;background:#fff8e8;color:#5f4600;font-size:10px;line-height:1.5}
+        .pdf-legal{margin-top:12px;padding-top:10px;border-top:1px solid #ccd9e2;font-size:8.5px;color:#536273;line-height:1.5;text-align:center}
+        @media(max-width:650px){.quote-style-grid{flex-direction:column}.style-option{min-width:100%}}
+        
+        /* Estilos resultados precios tiendas Chile */
+        .resultado-precio{padding:6px 10px;margin:4px 0;background:#fff;border:1px solid #dce5ef;border-radius:6px;font-size:0.88rem;display:flex;justify-content:space-between;align-items:center}
+        .resultado-precio.estimado{background:#fff8e8;border-color:#F5A400;color:#5f4600}
+        .resultado-precio small{font-size:0.75rem;color:#536273;margin-left:6px}
+    </style>
+</head>
+<body>
+    <div class="container" hidden>
+        <header class="brand-header">
+            <div class="brand">
+                <div class="brand-logo" aria-label="Logo CB Solar">
+                    <span class="brand-sun">☀</span>
+                    <span class="brand-panel">▱</span>
+                </div>
+                <div>
+                    <h1>COTIZADOR <span>PRO HÍBRIDO</span></h1>
+                    <p class="brand-tagline">TU ENERGÍA · TU INDEPENDENCIA</p>
+                </div>
+            </div>
+            <div class="brand-actions">
+                <span class="version-badge">V3.2 LOCAL</span>
+                <span class="country-badge">🇨🇱 Chile</span>
+                <button class="toggle-dark" onclick="toggleModoOscuro()">🌓 Modo</button>
+            </div>
+        </header>
+        <p class="subtitle">Búsqueda Automática Universal de Precios · Real-Time · <span id="autosaveStatus" class="autosave-indicator">💾 Listo</span></p>
+        
+        <div class="tabs">
+            <div class="tab activa" onclick="cambiarTab('cotizacion', event)">📝 Cotización</div>
+            <div class="tab" onclick="cambiarTab('plantillas', event)">📋 Plantillas</div>
+            <div class="tab" onclick="cambiarTab('estadisticas', event)">📊 Estadísticas</div>
+            <div class="tab" onclick="cambiarTab('historial', event)">📚 Historial</div>
+        </div>
+        
+        <!-- SECCIÓN COTIZACIÓN -->
+        <div id="cotizacion" class="seccion visible">
+            <div class="card">
+                <h2>📋 Datos del Cliente / Cotización</h2>
+                <div class="form-row">
+                    <div class="form-group"><label>N° Cotización</label><input type="text" id="numCotizacion" readonly style="background:#eee;font-weight:bold;"></div>
+                    <div class="form-group"><label>Fecha</label><input type="date" id="fechaCotizacion"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Cliente</label><input type="text" id="nombreCliente" placeholder="Nombre completo" oninput="programarAutoguardado()"></div>
+                    <div class="form-group"><label>Fono (Ej: +56912345678)</label><input type="tel" id="fonoCliente" placeholder="+569..." maxlength="12" oninput="validarFono(this);programarAutoguardado()"></div>
+                </div>
+                <div class="form-group"><label>Observaciones / Dirección</label><textarea id="observaciones" rows="2" placeholder="Ej: Dirección de entrega o condiciones" oninput="programarAutoguardado()"></textarea></div>
+                
+                <div class="notas-internas">
+                    <label>📝 Notas Internas (no aparecen en el PDF)</label>
+                    <textarea id="notasInternas" rows="2" placeholder="Notas privadas para referencia..." oninput="programarAutoguardado()"></textarea>
+                </div>
+            </div>
+            
+            <div class="quote-style-card">
+                <h2 style="border:0;margin-bottom:8px;padding:0;">🎨 Estilo de la Cotización</h2>
+                <div class="quote-style-grid">
+                    <div class="style-option"><input type="radio" id="estiloProfesional" name="estiloCotizacion" value="professional"><label for="estiloProfesional">🏢 Profesional</label></div>
+                    <div class="style-option"><input type="radio" id="estiloPremium" name="estiloCotizacion" value="premium"><label for="estiloPremium">☀️ Premium</label></div>
+                    <div class="style-option"><input type="radio" id="estiloProfesionalPremium" name="estiloCotizacion" value="professional-premium" checked><label for="estiloProfesionalPremium">⭐ Profesional + Premium</label></div>
+                </div>
+                <div style="font-size:.76rem;margin-top:8px;color:#536273;">La opción combinada incluye presentación corporativa, identidad CB, bloque de energía solar y mensaje para el hogar y la familia.</div>
+            </div>
+            
+            <div class="card">
+                <h2>🔍 Agregar Item <span id="editModeLabel" style="float:right;font-size:.7rem;color:#F5A400;display:none;">✏️ MODO EDICIÓN</span></h2>
+                
+                <div id="editingIndicator" class="editing-indicator">
+                    ✏️ Editando item. Realiza los cambios y pulsa "ACTUALIZAR ITEM" o "CANCELAR".
+                </div>
+                
+                <div class="config-box">
+                    <strong>⚙️ Configuración Scraper Cloud / API Key (Opcional):</strong>
+                    <div class="form-row" style="margin-top:4px;">
+                        <div class="form-group"><input type="text" id="scraperApiKey" placeholder="API Key de ScraperAPI (Ej: a1b2c3d4...)" style="padding:6px;font-size:0.8rem;"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group"><label>Tipo</label>
+                        <select id="tipoItem" onchange="cambiarTipo()">
+                            <option value="producto">📦 Producto (Búsqueda Automática)</option>
+                            <option value="servicio">🛠️ Servicio</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:2"><label>Descripción</label>
+                        <input type="text" id="descripcion" placeholder="Ej: cable 2,5mm, camarilla 110mm, cemento, etc.">
+                    </div>
+                </div>
+                
+                <div id="campoProducto" class="campo-producto">
+                    <button class="btn-auto-search" id="btnAutoSearch" onclick="ejecutarBusquedaAutomatica()">⚡ BUSCAR PRECIOS EN TIENDAS DE CHILE</button>
+                    
+                    <div id="resultadosPrecios" style="margin:8px 0;padding:10px;background:#f8fbfd;border-radius:8px;font-size:0.9rem;"></div>
+                    
+                    <div class="form-row" style="flex-wrap:wrap;">
+                        <div class="form-group" style="min-width:120px"><label>Mercado Libre</label><input type="text" id="precio_mercadolibre" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Falabella</label><input type="text" id="precio_falabella" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Paris</label><input type="text" id="precio_paris" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Ripley</label><input type="text" id="precio_ripley" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Sodimac</label><input type="text" id="precio_sodimac" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Easy</label><input type="text" id="precio_easy" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                        <div class="form-group" style="min-width:120px"><label>Líder (Walmart)</label><input type="text" id="precio_lider" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                    </div>
+                    <div id="errorPrecioProducto" class="error-precio">⚠️ No se pudo extraer el precio automático desde ninguna tienda. Ajusta el término de búsqueda.</div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Mejor Precio Costo (Automático) ✅</label><input type="text" id="mejorPrecio" value="$0" readonly style="background:#EAF6FB;font-weight:bold;color:#0B2A4A"></div>
+                    </div>
+                    <div id="tiendaMejor" style="font-size:0.85rem;color:#16A56A;margin-bottom:8px;font-weight:bold;"></div>
+                    <div id="estadoPrecio" style="font-size:0.75rem;color:#536273;margin-top:-4px;margin-bottom:8px;"></div>
+                </div>
+                
+                <div id="campoServicio" class="campo-servicio">
+                    <div class="form-row">
+                        <div class="form-group"><label>Precio Servicio $</label><input type="number" id="precioServicio" min="0" step="1" oninput="actualizarServicio()"></div>
+                    </div>
+                </div>
+                
+                <div class="form-row" style="background:#EEF8F6;padding:10px;border-radius:8px;margin-top:8px;">
+                    <div class="form-group"><label>Margen %</label><input type="number" id="margen" value="30" min="0" max="500" oninput="recalcularVentaPorMargen()"></div>
+                    <div class="form-group"><label>Precio Venta $ (Calculado / Editable)</label><input type="number" id="precioVenta" style="font-weight:bold;color:#0B2A4A;background:#fff;"></div>
+                    <div class="form-group"><label>Cantidad</label><input type="number" id="cantidad" value="1" min="1"></div>
+                </div>
+                
+                <div class="descuento-row">
+                    <div class="form-row" style="margin:0;">
+                        <div class="form-group"><label>🏷️ Descuento % (opcional)</label><input type="number" id="descuentoItem" value="0" min="0" max="100" style="padding:8px;font-size:.9rem;" oninput="actualizarVistaDescuento()"></div>
+                        <div class="form-group"><label>Precio con descuento</label><input type="text" id="precioConDescuento" readonly style="background:#FFF5F5;padding:8px;font-size:.9rem;font-weight:bold;color:#721C24;"></div>
+                    </div>
+                </div>
+                
+                <div class="action-bar">
+                    <button class="btn-success btn-block" id="btnAgregar" onclick="agregarProducto()">✅ AGREGAR A TABLA</button>
+                    <button class="btn-warning btn-block" id="btnActualizar" onclick="actualizarItem()" style="display:none;">🔄 ACTUALIZAR ITEM</button>
+                    <button class="btn-secondary btn-block" id="btnCancelarEdit" onclick="cancelarEdicion()" style="display:none;">❌ CANCELAR</button>
+                    <button class="btn-info btn-sm" onclick="guardarComoPlantilla()" style="margin-top:8px;">💾 Guardar como Plantilla</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📝 Detalle de Cotización <span style="float:right;font-size:.7rem;color:#536273;">💡 Doble clic para editar</span></h2>
+                
+                <div class="buscador" style="margin-top:8px;">
+                    <span class="buscador-icon">🔍</span>
+                    <input type="text" id="buscadorItems" placeholder="Filtrar items en esta cotización..." oninput="actualizarTabla()">
+                </div>
+                
+                <div style="overflow-x:auto">
+                    <table>
+                        <thead><tr><th>Descripción</th><th>Cant</th><th>$ Venta</th><th>Desc %</th><th>Subtotal</th><th>Acciones</th></tr></thead>
+                        <tbody id="listaProductos">
+                            <tr><td colspan="6" style="text-align:center;color:#888;padding:20px">Sin items aún</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="resumen-final">
+                    <div class="form-row">
+                        <div class="form-group" style="text-align:right"><label>Subtotal $</label><input type="text" id="subtotal" value="$0" readonly></div>
+                        <div class="form-group" style="text-align:right"><label>IVA %</label><input type="number" id="ivaPorcentaje" value="19" min="0" max="100" oninput="actualizarTotales();programarAutoguardado()" style="width:80px"></div>
+                    </div>
+                    <div class="form-row"><div class="form-group" style="text-align:right"><label>IVA $</label><input type="text" id="iva" value="$0" readonly></div></div>
+                    <div class="form-row">
+                        <div class="form-group" style="text-align:right"><label>Flete (%)</label><input type="number" id="fletePorcentaje" value="0" min="0" oninput="actualizarTotales();programarAutoguardado()" style="width:80px"></div>
+                        <div class="form-group" style="text-align:right"><label>Flete $</label><input type="text" id="fleteMonto" value="$0" readonly></div>
+                    </div>
+                    <div class="form-row total-row">
+                        <div class="form-group" style="text-align:right">
+                            <label>TOTAL $</label>
+                            <input type="text" id="total" value="$0" readonly style="font-size:1.1rem">
+                            <div class="usd-display" id="totalUSD">≈ USD 0.00 (TC: $0)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>⚙️ Acciones <span style="float:right;font-size:.7rem;color:#087EBD;">V3.2 Local</span></h2>
+                <div class="form-row" style="flex-wrap:wrap;">
+                    <button class="btn-success" id="btnPDF" onclick="generarPDF()">📄 DESCARGAR PDF</button>
+                    <button class="btn-primary" onclick="guardarCotizacion()">💾 Guardar</button>
+                    <button class="btn-info" onclick="duplicarCotizacion()">📋 Duplicar</button>
+                    <button class="btn-warning" onclick="nuevaCotizacion()">🗑️ Nueva</button>
+                    <button class="btn-secondary" onclick="compartirWhatsApp()">📱 WhatsApp</button>
+                    <button class="btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
+                    <button class="btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN PLANTILLAS -->
+        <div id="plantillas" class="seccion">
+            <div class="card">
+                <h2>📋 Plantillas Rápidas</h2>
+                <p style="font-size:.85rem;color:#536273;margin-bottom:10px;">Guarda items frecuentes para agregarlos rápidamente a cualquier cotización.</p>
+                <div class="plantillas-grid" id="plantillasGrid">
+                    <p style="grid-column:1/-1;text-align:center;color:#888;padding:20px;">Sin plantillas guardadas. Crea una desde la pestaña Cotización.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN ESTADÍSTICAS -->
+        <div id="estadisticas" class="seccion">
+            <div class="card">
+                <h2>📊 Panel de Estadísticas</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card primary"><div class="stat-value" id="statTotalCot">0</div><div class="stat-label">Total Cotizaciones</div></div>
+                    <div class="stat-card success"><div class="stat-value" id="statMontoTotal">$0</div><div class="stat-label">Monto Total</div></div>
+                    <div class="stat-card warning"><div class="stat-value" id="statPromedio">$0</div><div class="stat-label">Promedio / Cotización</div></div>
+                    <div class="stat-card info"><div class="stat-value" id="statTotalItems">0</div><div class="stat-label">Items Cotizados</div></div>
+                </div>
+                <div style="margin-top:15px;">
+                    <h3 style="font-size:.9rem;color:#0B2A4A;margin-bottom:8px;">🏆 Clientes con más cotizaciones</h3>
+                    <div id="topClientes" style="font-size:.85rem;"></div>
+                </div>
+                <div style="margin-top:15px;">
+                    <h3 style="font-size:.9rem;color:#0B2A4A;margin-bottom:8px;">📅 Actividad reciente</h3>
+                    <div id="actividadReciente" style="font-size:.85rem;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN HISTORIAL -->
+        <div id="historial" class="seccion">
+            <div class="card">
+                <h2>📚 Historial</h2>
+                <div class="buscador">
+                    <span class="buscador-icon">🔍</span>
+                    <input type="text" id="buscadorHistorial" placeholder="Buscar por cliente o N°..." oninput="renderizarHistorial()">
+                </div>
+                <div class="form-row" style="margin:10px 0;flex-wrap:wrap;">
+                    <button class="btn-secondary btn-sm" onclick="exportarRespaldo()">📥 Exportar respaldo</button>
+                    <button class="btn-primary btn-sm" onclick="document.getElementById('archivoRespaldo').click()">📤 Importar respaldo</button>
+                    <input type="file" id="archivoRespaldo" accept=".json,application/json" style="display:none" onchange="importarRespaldo(event)">
+                    <button class="btn-danger btn-sm" onclick="borrarTodoHistorial()">🗑️ Borrar todo</button>
+                </div>
+                <div id="listaHistorial">
+                    <p style="text-align:center;color:#888;padding:20px">Sin cotizaciones guardadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="quote-validity" style="margin:0 0 10px;padding:9px 12px;border-radius:9px;background:rgba(245,164,0,.12);border:1px solid rgba(245,164,0,.35);color:#fff;text-align:center;font-size:.78rem;font-weight:700;">
+        📅 Cotización válida por 5 días corridos desde la fecha de emisión.
+    </div>
+    
+    <footer class="copyright-footer">
+        <div>
+            <div class="copyright-brand">⚡ COTIZADOR <b>PRO HÍBRIDO</b> <span style="font-size:.65em;opacity:.8">V3.2 LOCAL</span></div>
+            <div>Diseñada por <strong>Cristian Borquez</strong> · Derechos Reservados</div>
+            <div>Prohibida la copia total o parcial, reproducción, distribución o modificación sin autorización.</div>
+            <div style="margin-top:4px;opacity:.7;">✨ Nuevas: Editar items · Plantillas · Estadísticas · Autoguardado · WhatsApp · Descuentos</div>
+        </div>
+        <div class="cb-mark">CB</div>
+    </footer>
+    
+    <!-- PDF RENDER BOX -->
+    <div id="pdfRenderBox" class="pdf-style-professional-premium">
+        <div class="pdf-cover">
+            <div class="pdf-brand-lockup">
+                <div class="pdf-logo-mark">CB</div>
+                <div>
+                    <div class="pdf-brand-name">COTIZADOR <span>PRO HÍBRIDO</span></div>
+                    <div class="pdf-brand-sub">TU ENERGÍA · TU INDEPENDENCIA · CHILE</div>
+                </div>
+            </div>
+            <div class="pdf-doc-badge">
+                <strong>COTIZACIÓN</strong><br>
+                N° <span id="pdfNum"></span><br>
+                Emisión: <span id="pdfFecha"></span><br>
+                Válida hasta: <span id="pdfVigencia"></span>
+            </div>
+        </div>
+        <div class="pdf-info-card">
+            <div class="pdf-info-title">DATOS DEL CLIENTE</div>
+            <div class="header-grid" style="margin-bottom:0;">
+                <div>
+                    <strong>Cliente:</strong> <span id="pdfCliente"></span><br>
+                    <strong>Fono:</strong> <span id="pdfFono"></span>
+                </div>
+                <div style="text-align:right;max-width:52%;">
+                    <strong>Dirección / Observaciones:</strong><br><span id="pdfObs"></span>
+                </div>
+            </div>
+            <div class="pdf-validity-badge">📅 Cotización válida por 5 días corridos desde la fecha de emisión.</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th style="width:50px;text-align:center;">Cant</th>
+                    <th style="width:50px;text-align:center;">Desc%</th>
+                    <th style="width:100px;text-align:right;">Precio Unit.</th>
+                    <th style="width:110px;text-align:right;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody id="pdfTablaBody"></tbody>
+        </table>
+        <div class="resumen-box">
+            <div><strong>Subtotal:</strong> <span id="pdfSubtotal"></span></div>
+            <div><strong>IVA (<span id="pdfIvaPct"></span>%):</strong> <span id="pdfIva"></span></div>
+            <div><strong>Flete (<span id="pdfFletePct"></span>%):</strong> <span id="pdfFlete"></span></div>
+            <div class="total"><strong>TOTAL:</strong> <span id="pdfTotal"></span></div>
+        </div>
+        <div style="clear:both;"></div>
+        <div class="pdf-premium-note">
+            <strong>ENERGÍA SOLAR · INDEPENDENCIA Y PROTECCIÓN</strong><br>
+            Una propuesta preparada para ayudarte a optimizar el consumo energético y avanzar hacia una mayor independencia para tu hogar o proyecto.
+        </div>
+        <div class="pdf-energy-box">
+            <div class="pdf-family-art" aria-hidden="true"><div class="person"></div><div class="child"></div></div>
+            <div>
+                <div class="pdf-energy-title">Energía para tu hogar y tu familia</div>
+                <div class="pdf-energy-copy">Una solución pensada para acompañar el futuro de quienes más quieres, con una presentación clara y profesional de tu propuesta energética.</div>
+            </div>
+            <div style="margin-left:auto;width:48px;height:48px;border:2px solid #F5A400;border-radius:12px;display:grid;place-items:center;font-size:18px;font-weight:900;">CB</div>
+        </div>
+        <div class="pdf-legal">
+            Diseñada por <strong>Cristian Borquez</strong> · Derechos Reservados ·
+            Prohibida la copia total o parcial, reproducción, distribución o modificación sin autorización.
+        </div>
+    </div>
+
+    <script>
+        // =============================================================
+        // COTIZADOR PRO HÍBRIDO V2.4 — VERSIÓN MEJORADA
+        // Nuevas funcionalidades: editar items, plantillas, estadísticas,
+        // autoguardado, descuentos por item, WhatsApp, tipo de cambio USD,
+        // notas internas, validación teléfono, buscar items en tabla,
+        // duplicar cotización, historial de precios.
+        // =============================================================
+        
+        let productos = [];
+        let historial = [];
+        let plantillas = [];
+        let historialPrecios = [];
+        let idCotizacionActual = null;
+        let idEditando = null;
+        let tipoActual = 'producto';
+        let mejorCostoEncontrado = 0;
+        let tipoCambioUSD = 0;
+        let autosaveTimer = null;
+        
+        // =============================================================
+        // FUNCIONES BÁSICAS DE UTILIDAD
+        // =============================================================
+        
+        function getNum(id) {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const raw = String(el.value ?? '').trim();
+            const normalizado = raw.replace(/[^0-9,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.');
+            const val = parseFloat(normalizado);
+            return Number.isFinite(val) && val >= 0 ? val : 0;
+        }
+        
+        function getMoney(id) { return getNum(id); }
+        
+        function formato(v) {
+            return Math.round(Number(v) || 0).toLocaleString('es-CL');
+        }
+        
+        function escapeHTML(str) {
+            return (str || '').replace(/[&<>"']/g, function(m) {
+                switch (m) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    case "'": return '&#039;';
+                    default: return m;
+                }
+            });
+        }
+        
+        function guardarLS(clave, datos) {
+            try { localStorage.setItem(clave, JSON.stringify(datos)); return true; }
+            catch (e) { console.error('Error guardando '+clave, e); return false; }
+        }
+        
+        function cargarLS(clave, defecto) {
+            try {
+                const g = localStorage.getItem(clave);
+                return g ? JSON.parse(g) : defecto;
+            } catch (e) { return defecto; }
+        }
+        
+        // =============================================================
+        // INICIALIZACIÓN
+        // =============================================================
+        
+        function iniciarApp() {
+            const fechaInput = document.getElementById('fechaCotizacion');
+            if (fechaInput) fechaInput.valueAsDate = new Date();
+            
+            historial = cargarLS('cotizador_historial', []);
+            plantillas = cargarLS('cotizador_plantillas', []);
+            historialPrecios = cargarLS('cotizador_historialPrecios', []);
+            
+            cargarBorradorAutoguardado();
+            generarNuevoCorrelativo();
+            actualizarTabla();
+            cargarModoOscuro();
+            cambiarTipo();
+            renderizarPlantillas();
+            actualizarVistaDescuento();
+            
+            // Cargar tipo de cambio
+            const tcGuardado = cargarLS('cotizador_tipoCambio', { valor: 950, fecha: null });
+            tipoCambioUSD = tcGuardado.valor || 950;
+            actualizarDisplayUSD();
+            
+            // Intentar obtener TC actual
+            obtenerTipoCambioBCU();
+        }
+        
+        // =============================================================
+        // TABS Y NAVEGACIÓN
+        // =============================================================
+        
+        function cambiarTab(nombre, e) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('activa'));
+            if (e && e.target) e.target.classList.add('activa');
+            document.querySelectorAll('.seccion').forEach(s => s.classList.remove('visible'));
+            document.getElementById(nombre).classList.add('visible');
+            
+            if (nombre === 'historial') renderizarHistorial();
+            if (nombre === 'plantillas') renderizarPlantillas();
+            if (nombre === 'estadisticas') actualizarEstadisticas();
+        }
+        
+        // =============================================================
+        // MODO OSCURO
+        // =============================================================
+        
+        function toggleModoOscuro() {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('modoOscuro', document.body.classList.contains('dark') ? '1' : '0');
+        }
+        
+        function cargarModoOscuro() {
+            if (localStorage.getItem('modoOscuro') === '1') document.body.classList.add('dark');
+        }
+        
+        // =============================================================
+        // CORRELATIVO Y NUEVA COTIZACIÓN
+        // =============================================================
+        
+        function generarNuevoCorrelativo() {
+            idCotizacionActual = null;
+            let maxNum = 0;
+            historial.forEach(item => {
+                if (item.numero) {
+                    const match = item.numero.match(/COT-(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxNum) maxNum = num;
+                    }
+                }
+            });
+            const siguiente = maxNum + 1;
+            document.getElementById('numCotizacion').value = 'COT-' + String(siguiente).padStart(3, '0');
+        }
+        
+        function nuevaCotizacion() {
+            if (productos.length > 0 && !confirm('Se eliminarán los productos de la cotización actual que no hayan sido guardados. ¿Continuar?')) return;
+            idCotizacionActual = null;
+            generarNuevoCorrelativo();
+            document.getElementById('nombreCliente').value = '';
+            document.getElementById('fonoCliente').value = '';
+            document.getElementById('observaciones').value = '';
+            document.getElementById('notasInternas').value = '';
+            establecerEstiloCotizacion('professional-premium');
+            document.getElementById('ivaPorcentaje').value = 19;
+            document.getElementById('fletePorcentaje').value = 0;
+            productos = [];
+            actualizarTabla();
+            limpiarCampos();
+            cancelarEdicion();
+            localStorage.removeItem('cotizador_borrador');
+            actualizarEstadoAutoguardado('Listo');
+        }
+        
+        // =============================================================
+        // TIPO DE ITEM Y CÁLCULOS
+        // =============================================================
+        
+        function cambiarTipo() {
+            tipoActual = document.getElementById('tipoItem').value;
+            const campoProducto = document.getElementById('campoProducto');
+            const campoServicio = document.getElementById('campoServicio');
+            document.getElementById('errorPrecioProducto').classList.remove('visible');
+            
+            if (tipoActual === 'producto') {
+                campoProducto.style.display = 'block';
+                campoServicio.classList.remove('visible');
+            } else {
+                campoProducto.style.display = 'none';
+                campoServicio.classList.add('visible');
+            }
+        }
+        
+        function actualizarServicio() {
+            const precio = getNum('precioServicio');
+            const margen = getNum('margen');
+            document.getElementById('precioVenta').value = Math.round(precio * (1 + margen / 100));
+            actualizarVistaDescuento();
+        }
+        
+        function recalcularVentaPorMargen() {
+            const margen = getNum('margen');
+            if (mejorCostoEncontrado > 0) {
+                document.getElementById('precioVenta').value = Math.round(mejorCostoEncontrado * (1 + margen / 100));
+            } else if (tipoActual === 'servicio') {
+                actualizarServicio();
+            }
+            actualizarVistaDescuento();
+        }
+        
+        function actualizarVistaDescuento() {
+            const precioVenta = getNum('precioVenta');
+            const descuento = getNum('descuentoItem');
+            const precioConDesc = Math.round(precioVenta * (1 - descuento / 100));
+            document.getElementById('precioConDescuento').value = '$' + formato(precioConDesc);
+        }
+        
+        // =============================================================
+        // VALIDACIÓN TELÉFONO CHILENO
+        // =============================================================
+        
+        function validarFono(input) {
+            let valor = input.value.replace(/[^0-9+]/g, '');
+            if (!valor.startsWith('+')) {
+                if (valor.startsWith('56')) valor = '+' + valor;
+                else if (valor.startsWith('9')) valor = '+56' + valor;
+                else if (valor.length >= 8) valor = '+569' + valor.replace(/^9/, '');
+            }
+            if (valor.length > 12) valor = valor.slice(0, 12);
+            input.value = valor;
+            
+            if (valor.length > 0 && !/^\+569\d{8}$/.test(valor)) {
+                input.style.borderColor = '#F5A400';
+            } else if (valor.length > 0) {
+                input.style.borderColor = '#16A56A';
+            } else {
+                input.style.borderColor = '';
+            }
+        }
+        
+        // =============================================================
+        // BÚSQUEDA AUTOMÁTICA DE PRECIOS
+        // =============================================================
+        
+        // =============================================================
+        // BÚSQUEDA AUTOMÁTICA DE PRECIOS — CHILE NACIONAL
+        // =============================================================
+        
+        const TIENDAS_CHILE = [
+            { nombre: 'Mercado Libre', key: 'mercadolibre', api: true },
+            { nombre: 'Falabella', key: 'falabella', dominio: 'falabella.com' },
+            { nombre: 'Paris', key: 'paris', dominio: 'paris.cl' },
+            { nombre: 'Ripley', key: 'ripley', dominio: 'ripley.com.cl' },
+            { nombre: 'Sodimac', key: 'sodimac', dominio: 'sodimac.cl' },
+            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl' },
+            { nombre: 'Lider (Walmart)', key: 'lider', dominio: 'lider.cl' }
+        ];
+        
+        async function ejecutarBusquedaAutomatica() {
+            const desc = document.getElementById('descripcion').value.trim();
+            if (!desc) { alert('Ingresa una descripción.'); return; }
+            const btn = document.getElementById('btnAutoSearch');
+            const estado = document.getElementById('estadoPrecio');
+            const contenedor = document.getElementById('resultadosPrecios');
+            btn.textContent = '⏳ Buscando precios en tiendas de Chile...';
+            btn.disabled = true;
+            document.getElementById('errorPrecioProducto').classList.remove('visible');
+            estado.textContent = 'Buscando en ' + TIENDAS_CHILE.length + ' tiendas…';
+            contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando precios…</p>';
+            const apiKey = (document.getElementById('scraperApiKey').value || '').trim();
+            
+            // Reset campos individuales
+            TIENDAS_CHILE.forEach(t => {
+                const el = document.getElementById('precio_' + t.key);
+                if (el) el.value = 'Buscando…';
+            });
+            
+            try {
+                const resultados = await Promise.allSettled(TIENDAS_CHILE.map(async (tienda) => {
+                    if (tienda.api) {
+                        const val = await buscarMercadoLibre(desc, apiKey);
+                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'API directa' };
+                    } else {
+                        const val = await buscarTiendaConProxy(desc, tienda.dominio, apiKey);
+                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
+                    }
+                }));
+                
+                const encontrados = [];
+                resultados.forEach((r, i) => {
+                    if (r.status === 'fulfilled' && r.value.valor > 0) {
+                        encontrados.push(r.value);
+                    }
+                    const elInput = document.getElementById('precio_' + TIENDAS_CHILE[i].key);
+                    if (elInput) {
+                        if (r.status === 'fulfilled' && r.value.valor > 0) {
+                            elInput.value = '$' + formato(r.value.valor);
+                        } else {
+                            elInput.value = 'No disponible';
+                        }
+                    }
+                });
+                
+                // Renderizar resultados detallados
+                if (encontrados.length > 0) {
+                    const html = encontrados.map(r => `
+                        <div class="resultado-precio">
+                            <strong>${r.tienda}</strong> — $${formato(r.valor)} <small>(${r.fuente})</small>
+                        </div>
+                    `).join('');
+                    contenedor.innerHTML = html;
+                    
+                    let esEstimacion = false;
+                    if (encontrados.length === 0) {
+                        const estimado = estimarPrecioPorAlgoritmo(desc);
+                        if (estimado > 0) {
+                            esEstimacion = true;
+                            encontrados.push({ tienda: 'Estimación interna', key: 'estimado', valor: estimado, fuente: 'Algoritmo' });
+                            contenedor.innerHTML = '<div class="resultado-precio estimado"><strong>Estimación interna</strong> — $' + formato(estimado) + ' <small>(referencial)</small></div>';
+                        }
+                    }
+                    
+                    const validos = encontrados.filter(x => x.valor > 0);
+                    if (validos.length > 0) {
+                        validos.sort((a, b) => a.valor - b.valor);
+                        const mejor = validos[0];
+                        mejorCostoEncontrado = mejor.valor;
+                        document.getElementById('mejorPrecio').value = '$' + formato(mejor.valor);
+                        
+                        guardarHistorialPrecio(desc, mejor.valor, mejor.tienda, esEstimacion);
+                        
+                        document.getElementById('tiendaMejor').textContent = esEstimacion
+                            ? `⚠️ Mejor costo estimado: $${formato(mejor.valor)}`
+                            : `🏆 Mejor precio en ${mejor.tienda}: $${formato(mejor.valor)}`;
+                        estado.textContent = esEstimacion
+                            ? 'Precio estimado internamente. Verifica disponibilidad antes de cotizar.'
+                            : 'Mejor precio encontrado en ' + mejor.tienda + '. Puede variar según disponibilidad.';
+                        recalcularVentaPorMargen();
+                    } else {
+                        throw new Error('No se encontraron precios');
+                    }
+                } else {
+                    const estimado = estimarPrecioPorAlgoritmo(desc);
+                    if (estimado > 0) {
+                        contenedor.innerHTML = '<div class="resultado-precio estimado"><strong>Estimación interna</strong> — $' + formato(estimado) + ' <small>(referencial, sin tiendas en línea)</small></div>';
+                        document.getElementById('mejorPrecio').value = '$' + formato(estimado);
+                        document.getElementById('tiendaMejor').textContent = `⚠️ Costo referencial estimado: $${formato(estimado)}`;
+                        estado.textContent = 'No se encontraron precios en tiendas. Usando estimación interna.';
+                        mejorCostoEncontrado = estimado;
+                        recalcularVentaPorMargen();
+                    } else {
+                        mejorCostoEncontrado = 0;
+                        document.getElementById('errorPrecioProducto').classList.add('visible');
+                        document.getElementById('mejorPrecio').value = '$0';
+                        document.getElementById('tiendaMejor').textContent = '';
+                        estado.textContent = '';
+                        document.getElementById('precioVenta').value = '';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('errorPrecioProducto').classList.add('visible');
+                estado.textContent = 'No fue posible completar la búsqueda automática.';
+                contenedor.innerHTML = '<p style="color:#d00;text-align:center">Error consultando tiendas.</p>';
+            } finally {
+                btn.textContent = '⚡ BUSCAR PRECIOS EN TIENDAS DE CHILE';
+                btn.disabled = false;
+            }
+        }
+        
+        async function buscarMercadoLibre(query, apiKey) {
+            try {
+                let targetUrl = `https://api.mercadolibre.com/sites/MLC/search?q=${encodeURIComponent(query)}&limit=10`;
+                if (apiKey) {
+                    targetUrl = `https://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetUrl)}`;
+                }
+                const res = await fetch(targetUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    let items = data.results || [];
+                    if (items.length > 0) {
+                        const precios = items.map(r => r.price).filter(p => p && p > 300);
+                        if (precios.length > 0) return Math.min(...precios);
+                    }
+                }
+            } catch(e) { console.error('Error ML:', e); }
+            return 0;
+        }
+        
+        async function buscarTiendaConProxy(query, dominio, apiKey) {
+            try {
+                const targetSearchUrl = `https://www.google.com/search?q=site:${dominio}+${encodeURIComponent(query)}+precio`;
+                const proxyUrl = apiKey
+                    ? `https://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetSearchUrl)}`
+                    : `https://api.allorigins.win/get?url=${encodeURIComponent(targetSearchUrl)}`;
+                
+                const res = await fetch(proxyUrl);
+                if (res.ok) {
+                    let htmlContent = '';
+                    if (apiKey) {
+                        htmlContent = await res.text();
+                    } else {
+                        const data = await res.json();
+                        htmlContent = data.contents || '';
+                    }
+                    const regex = /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+)/g;
+                    let match, precios = [];
+                    while ((match = regex.exec(htmlContent)) !== null) {
+                        const val = parseInt(match[1].replace(/\./g, ''), 10);
+                        if (val >= 500 && val <= 10000000) {
+                            precios.push(val);
+                        }
+                    }
+                    if (precios.length > 0) {
+                        return Math.min(...precios);
+                    }
+                }
+            } catch(e) { console.error(`Error ${dominio}:`, e); }
+            return 0;
+        }
+        
+        function estimarPrecioPorAlgoritmo(query) {
+            const q = query.toLowerCase();
+            if (q.includes('cable')) {
+                if (q.includes('1.5') || q.includes('1,5')) return 22900;
+                if (q.includes('2.5') || q.includes('2,5')) return 34900;
+                if (q.includes('4') || q.includes('4mm')) return 58900;
+                if (q.includes('6') || q.includes('6mm')) return 89900;
+                if (q.includes('10') || q.includes('10mm')) return 149900;
+                return 28900;
+            }
+            if (q.includes('camarilla') || q.includes('camara')) {
+                if (q.includes('110')) return 18500;
+                if (q.includes('160')) return 26900;
+                if (q.includes('200')) return 34900;
+                return 19900;
+            }
+            if (q.includes('panel') && q.includes('solar')) {
+                if (q.includes('550') || q.includes('555')) return 289000;
+                if (q.includes('450') || q.includes('455')) return 239000;
+                if (q.includes('300') || q.includes('330')) return 169000;
+                return 199000;
+            }
+            if (q.includes('inversor') || q.includes('inverter')) {
+                if (q.includes('5kw') || q.includes('5 kw')) return 689000;
+                if (q.includes('3kw') || q.includes('3 kw')) return 459000;
+                if (q.includes('10kw') || q.includes('10 kw')) return 1290000;
+                return 550000;
+            }
+            if (q.includes('bateria') || q.includes('batería')) {
+                if (q.includes('lithium') || q.includes('litio')) return 890000;
+                if (q.includes('gel') || q.includes('plomo')) return 289000;
+                return 350000;
+            }
+            if (q.includes('estructura') || q.includes('rack')) return 75000;
+            if (q.includes('cemento') || q.includes('hormigon')) return 4990;
+            if (q.includes('yeso') || q.includes('vulcanita')) return 8990;
+            if (q.includes('enchufe') || q.includes('interruptor')) return 2490;
+            if (q.includes('pvc') || q.includes('tubo')) return 6490;
+            if (q.includes('conector') || q.includes('mc4')) return 3500;
+            if (q.includes('instalacion') || q.includes('instalación') || q.includes('montaje')) return 150000;
+            return 0;
+        }
+        
+        function guardarHistorialPrecio(termino, precio, tienda, estimado) {
+            historialPrecios.unshift({
+                termino, precio, tienda, estimado,
+                fecha: new Date().toISOString()
+            });
+            if (historialPrecios.length > 50) historialPrecios = historialPrecios.slice(0, 50);
+            guardarLS('cotizador_historialPrecios', historialPrecios);
+        }
+        
+        // =============================================================
+        // AGREGAR / EDITAR / ELIMINAR ITEMS
+        // =============================================================
+        
+        function agregarProducto() {
+            const desc = document.getElementById('descripcion').value.trim();
+            const cant = getNum('cantidad');
+            const venta = getNum('precioVenta');
+            const descuento = getNum('descuentoItem');
+            
+            if (!desc) { alert('Debes ingresar una descripción.'); return; }
+            if (venta <= 0) { alert('No se ha ingresado o calculado un precio de venta válido.'); return; }
+            if (cant <= 0) { alert('La cantidad debe ser mayor a 0.'); return; }
+            
+            const precioConDescuento = Math.round(venta * (1 - descuento / 100));
+            const subtotal = cant * precioConDescuento;
+            
+            productos.push({
+                id: Date.now(),
+                descripcion: desc,
+                cantidad: cant,
+                precioVenta: venta,
+                descuento: descuento,
+                precioConDescuento: precioConDescuento,
+                subtotal: subtotal,
+                tipo: tipoActual,
+                costo: mejorCostoEncontrado
+            });
+            
+            actualizarTabla();
+            limpiarCampos();
+            programarAutoguardado();
+        }
+        
+        function editarItem(id) {
+            const item = productos.find(p => p.id === id);
+            if (!item) return;
+            
+            idEditando = id;
+            document.getElementById('descripcion').value = item.descripcion;
+            document.getElementById('cantidad').value = item.cantidad;
+            document.getElementById('precioVenta').value = item.precioVenta;
+            document.getElementById('descuentoItem').value = item.descuento || 0;
+            document.getElementById('tipoItem').value = item.tipo;
+            tipoActual = item.tipo;
+            cambiarTipo();
+            
+            if (item.costo) {
+                mejorCostoEncontrado = item.costo;
+                document.getElementById('mejorPrecio').value = '$' + formato(item.costo);
+            }
+            
+            actualizarVistaDescuento();
+            
+            document.getElementById('btnAgregar').style.display = 'none';
+            document.getElementById('btnActualizar').style.display = 'block';
+            document.getElementById('btnCancelarEdit').style.display = 'block';
+            document.getElementById('editModeLabel').style.display = 'inline';
+            document.getElementById('editingIndicator').classList.add('visible');
+            
+            document.getElementById('descripcion').focus();
+            document.getElementById('descripcion').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function actualizarItem() {
+            if (!idEditando) return;
+            
+            const idx = productos.findIndex(p => p.id === idEditando);
+            if (idx === -1) return;
+            
+            const desc = document.getElementById('descripcion').value.trim();
+            const cant = getNum('cantidad');
+            const venta = getNum('precioVenta');
+            const descuento = getNum('descuentoItem');
+            
+            if (!desc) { alert('Debes ingresar una descripción.'); return; }
+            if (venta <= 0) { alert('No se ha ingresado un precio de venta válido.'); return; }
+            if (cant <= 0) { alert('La cantidad debe ser mayor a 0.'); return; }
+            
+            const precioConDescuento = Math.round(venta * (1 - descuento / 100));
+            
+            productos[idx].descripcion = desc;
+            productos[idx].cantidad = cant;
+            productos[idx].precioVenta = venta;
+            productos[idx].descuento = descuento;
+            productos[idx].precioConDescuento = precioConDescuento;
+            productos[idx].subtotal = cant * precioConDescuento;
+            productos[idx].tipo = tipoActual;
+            
+            actualizarTabla();
+            cancelarEdicion();
+            programarAutoguardado();
+        }
+        
+        function cancelarEdicion() {
+            idEditando = null;
+            document.getElementById('btnAgregar').style.display = 'block';
+            document.getElementById('btnActualizar').style.display = 'none';
+            document.getElementById('btnCancelarEdit').style.display = 'none';
+            document.getElementById('editModeLabel').style.display = 'none';
+            document.getElementById('editingIndicator').classList.remove('visible');
+            limpiarCampos();
+        }
+        
+        function duplicarItem(id) {
+            const item = productos.find(p => p.id === id);
+            if (!item) return;
+            
+            const nuevo = { ...item, id: Date.now() };
+            productos.push(nuevo);
+            actualizarTabla();
+            programarAutoguardado();
+        }
+        
+        function eliminar(id) {
+            if (!confirm('¿Eliminar este item?')) return;
+            productos = productos.filter(p => p.id !== id);
+            if (idEditando === id) cancelarEdicion();
+            actualizarTabla();
+            programarAutoguardado();
+        }
+        
+        function limpiarCampos() {
+            document.getElementById('descripcion').value = '';
+            document.getElementById('precio_mercadolibre').value = '';
+            document.getElementById('precio_falabella').value = '';
+            document.getElementById('precio_paris').value = '';
+            document.getElementById('precio_ripley').value = '';
+            document.getElementById('precio_sodimac').value = '';
+            document.getElementById('precio_easy').value = '';
+            document.getElementById('precio_lider').value = '';
+            document.getElementById('precioServicio').value = '';
+            document.getElementById('mejorPrecio').value = '$0';
+            document.getElementById('tiendaMejor').textContent = '';
+            const estadoPrecio = document.getElementById('estadoPrecio'); if (estadoPrecio) estadoPrecio.textContent = '';
+            document.getElementById('resultadosPrecios').innerHTML = '';
+            document.getElementById('precioVenta').value = '';
+            document.getElementById('cantidad').value = 1;
+            document.getElementById('descuentoItem').value = 0;
+            document.getElementById('errorPrecioProducto').classList.remove('visible');
+            mejorCostoEncontrado = 0;
+            actualizarVistaDescuento();
+        }
+        
+        // =============================================================
+        // TABLA Y TOTALES
+        // =============================================================
+        
+        function actualizarTabla() {
+            const tb = document.getElementById('listaProductos');
+            tb.innerHTML = '';
+            
+            const filtro = (document.getElementById('buscadorItems').value || '').toLowerCase();
+            const itemsFiltrados = productos.filter(p => 
+                !filtro || p.descripcion.toLowerCase().includes(filtro)
+            );
+            
+            if (productos.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">Sin items aún</td></tr>';
+                actualizarTotales();
+                return;
+            }
+            
+            if (itemsFiltrados.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px">No hay items que coincidan con la búsqueda</td></tr>';
+                actualizarTotales();
+                return;
+            }
+            
+            itemsFiltrados.forEach(p => {
+                const fila = document.createElement('tr');
+                fila.className = 'item-editable';
+                fila.ondblclick = () => editarItem(p.id);
+                
+                const descuentoHTML = p.descuento > 0 
+                    ? `<span class="descuento-badge">-${p.descuento}%</span>` 
+                    : '<span style="color:#999">—</span>';
+                
+                fila.innerHTML = `
+                    <td><strong>${escapeHTML(p.descripcion)}</strong><br><small style="color:#888">${p.tipo === 'servicio' ? '🛠️ Servicio' : '📦 Producto'}</small></td>
+                    <td>${p.cantidad}</td>
+                    <td>$${formato(p.precioVenta)}</td>
+                    <td>${descuentoHTML}</td>
+                    <td style="font-weight:bold">$${formato(p.subtotal)}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-primary btn-sm" onclick="editarItem(${p.id})" title="Editar">✏️</button>
+                        <button class="btn-info btn-sm" onclick="duplicarItem(${p.id})" title="Duplicar">📋</button>
+                        <button class="btn-danger btn-sm" onclick="eliminar(${p.id})" title="Eliminar">✕</button>
+                    </td>
+                `;
+                tb.appendChild(fila);
+            });
+            
+            actualizarTotales();
+        }
+        
+        function actualizarTotales() {
+            const subtotal = productos.reduce((s, p) => s + p.subtotal, 0);
+            const ivaPct = getNum('ivaPorcentaje');
+            const fletePct = getNum('fletePorcentaje');
+            const iva = subtotal * (ivaPct / 100);
+            const flete = subtotal * (fletePct / 100);
+            const total = subtotal + iva + flete;
+            
+            document.getElementById('subtotal').value = '$' + formato(subtotal);
+            document.getElementById('iva').value = '$' + formato(iva);
+            document.getElementById('fleteMonto').value = '$' + formato(flete);
+            document.getElementById('total').value = '$' + formato(total);
+            
+            actualizarDisplayUSD(total);
+        }
+        
+        // =============================================================
+        // TIPO DE CAMBIO Y USD
+        // =============================================================
+        
+        async function obtenerTipoCambioBCU() {
+            try {
+                const res = await fetch('https://mindicador.cl/api/dolar');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.serie && data.serie.length > 0) {
+                        tipoCambioUSD = Math.round(data.serie[0].valor);
+                        guardarLS('cotizador_tipoCambio', { valor: tipoCambioUSD, fecha: new Date().toISOString() });
+                        actualizarDisplayUSD();
+                    }
+                }
+            } catch(e) {
+                console.log('No se pudo obtener TC en vivo, usando valor guardado');
+            }
+        }
+        
+        function actualizarTipoCambio() {
+            const tc = prompt('Ingresa el tipo de cambio USD actual en CLP:', tipoCambioUSD || '950');
+            if (tc && !isNaN(tc) && parseFloat(tc) > 0) {
+                tipoCambioUSD = Math.round(parseFloat(tc));
+                guardarLS('cotizador_tipoCambio', { valor: tipoCambioUSD, fecha: new Date().toISOString() });
+                actualizarDisplayUSD();
+                alert('Tipo de cambio actualizado a $' + formato(tipoCambioUSD));
+            }
+        }
+        
+        function actualizarDisplayUSD(totalCLP) {
+            if (totalCLP === undefined) {
+                totalCLP = productos.reduce((s, p) => s + p.subtotal, 0);
+                totalCLP += totalCLP * (getNum('ivaPorcentaje') / 100);
+                totalCLP += totalCLP * (getNum('fletePorcentaje') / 100);
+            }
+            const totalUSD = tipoCambioUSD > 0 ? (totalCLP / tipoCambioUSD).toFixed(2) : '0.00';
+            document.getElementById('totalUSD').textContent = `≈ USD ${totalUSD} (TC: $${formato(tipoCambioUSD)})`;
+        }
+        
+        // =============================================================
+        // ESTILOS COTIZACIÓN
+        // =============================================================
+        
+        function establecerEstiloCotizacion(estilo) {
+            const radio = document.querySelector(`input[name="estiloCotizacion"][value="${estilo || 'professional-premium'}"]`);
+            if (radio) radio.checked = true;
+        }
+        
+        function obtenerEstiloCotizacion() {
+            const seleccionado = document.querySelector('input[name="estiloCotizacion"]:checked');
+            return seleccionado ? seleccionado.value : 'professional-premium';
+        }
+        
+        // =============================================================
+        // FECHA VIGENCIA
+        // =============================================================
+        
+        function calcularFechaVigencia(fechaBase) {
+            const fecha = fechaBase ? new Date(fechaBase + 'T00:00:00') : new Date();
+            if (Number.isNaN(fecha.getTime())) return '';
+            fecha.setDate(fecha.getDate() + 5);
+            const yyyy = fecha.getFullYear();
+            const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dd = String(fecha.getDate()).padStart(2, '0');
+            return `${dd}-${mm}-${yyyy}`;
+        }
+        
+        // =============================================================
+        // PLANTILLAS
+        // =============================================================
+        
+        function guardarComoPlantilla() {
+            const desc = document.getElementById('descripcion').value.trim();
+            const venta = getNum('precioVenta');
+            
+            if (!desc) { alert('Ingresa una descripción para la plantilla.'); return; }
+            if (venta <= 0) { alert('Ingresa un precio de venta válido.'); return; }
+            
+            const nombre = prompt('Nombre para esta plantilla:', desc);
+            if (!nombre) return;
+            
+            plantillas.unshift({
+                id: Date.now(),
+                nombre: nombre,
+                descripcion: desc,
+                tipo: tipoActual,
+                precioVenta: venta,
+                margen: getNum('margen'),
+                descuento: getNum('descuentoItem'),
+                cantidad: getNum('cantidad'),
+                fecha: new Date().toISOString()
+            });
+            
+            guardarLS('cotizador_plantillas', plantillas);
+            renderizarPlantillas();
+            alert('✅ Plantilla "' + nombre + '" guardada.');
+        }
+        
+        function renderizarPlantillas() {
+            const grid = document.getElementById('plantillasGrid');
+            
+            if (plantillas.length === 0) {
+                grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#888;padding:20px;">Sin plantillas guardadas.<br><small>Crea una desde la pestaña Cotización pulsando "Guardar como Plantilla".</small></p>';
+                return;
+            }
+            
+            grid.innerHTML = plantillas.map(p => `
+                <div class="plantilla-item">
+                    <strong>${escapeHTML(p.nombre)}</strong>
+                    <small>${escapeHTML(p.descripcion)}</small>
+                    <small style="color:#0B2A4A;font-weight:700;margin-top:4px;">$${formato(p.precioVenta)} · ${p.tipo}</small>
+                    <div class="plantilla-actions">
+                        <button class="btn-success btn-sm" onclick="aplicarPlantilla(${p.id})" style="flex:1;">+ Agregar</button>
+                        <button class="btn-danger btn-sm" onclick="eliminarPlantilla(${p.id})">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function aplicarPlantilla(id) {
+            const p = plantillas.find(x => x.id === id);
+            if (!p) return;
+            
+            document.getElementById('descripcion').value = p.descripcion;
+            document.getElementById('tipoItem').value = p.tipo;
+            tipoActual = p.tipo;
+            cambiarTipo();
+            document.getElementById('precioVenta').value = p.precioVenta;
+            document.getElementById('margen').value = p.margen || 30;
+            document.getElementById('descuentoItem').value = p.descuento || 0;
+            document.getElementById('cantidad').value = p.cantidad || 1;
+            actualizarVistaDescuento();
+            
+            cambiarTab('cotizacion', { target: document.querySelector('.tab:first-child') });
+            document.getElementById('descripcion').focus();
+            document.getElementById('descripcion').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function eliminarPlantilla(id) {
+            if (!confirm('¿Eliminar esta plantilla?')) return;
+            plantillas = plantillas.filter(p => p.id !== id);
+            guardarLS('cotizador_plantillas', plantillas);
+            renderizarPlantillas();
+        }
+        
+        // =============================================================
+        // ESTADÍSTICAS
+        // =============================================================
+        
+        function actualizarEstadisticas() {
+            const totalCot = historial.length;
+            const montoTotal = historial.reduce((s, c) => s + (c.total || 0), 0);
+            const promedio = totalCot > 0 ? Math.round(montoTotal / totalCot) : 0;
+            const totalItems = historial.reduce((s, c) => s + (c.productos ? c.productos.length : 0), 0);
+            
+            document.getElementById('statTotalCot').textContent = totalCot;
+            document.getElementById('statMontoTotal').textContent = '$' + formato(montoTotal);
+            document.getElementById('statPromedio').textContent = '$' + formato(promedio);
+            document.getElementById('statTotalItems').textContent = totalItems;
+            
+            // Top clientes
+            const conteoClientes = {};
+            historial.forEach(c => {
+                const cli = c.cliente || 'Sin nombre';
+                conteoClientes[cli] = (conteoClientes[cli] || 0) + 1;
+            });
+            
+            const topClientes = Object.entries(conteoClientes)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            const topClientesDiv = document.getElementById('topClientes');
+            if (topClientes.length === 0) {
+                topClientesDiv.innerHTML = '<p style="color:#888;">Sin datos aún. Guarda cotizaciones para ver estadísticas.</p>';
+            } else {
+                topClientesDiv.innerHTML = topClientes.map(([cli, cant], i) => `
+                    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;">
+                        <span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} <strong>${escapeHTML(cli)}</strong></span>
+                        <span style="color:#087EBD;font-weight:700;">${cant} cotizaciones</span>
+                    </div>
+                `).join('');
+            }
+            
+            // Actividad reciente
+            const recientes = [...historial]
+                .sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')))
+                .slice(0, 5);
+            
+            const actividadDiv = document.getElementById('actividadReciente');
+            if (recientes.length === 0) {
+                actividadDiv.innerHTML = '<p style="color:#888;">Sin actividad reciente.</p>';
+            } else {
+                actividadDiv.innerHTML = recientes.map(c => `
+                    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;">
+                        <span><strong>${escapeHTML(c.numero)}</strong> — ${escapeHTML(c.cliente)}</span>
+                        <span style="color:#16A56A;font-weight:700;">$${formato(c.total || 0)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // =============================================================
+        // DUPLICAR COTIZACIÓN
+        // =============================================================
+        
+        function duplicarCotizacion() {
+            if (productos.length === 0) { alert('No hay items para duplicar.'); return; }
+            
+            const clienteActual = document.getElementById('nombreCliente').value;
+            if (!confirm(`Duplicar cotización actual${clienteActual ? ' de ' + clienteActual : ''} como una nueva?`)) return;
+            
+            idCotizacionActual = null;
+            generarNuevoCorrelativo();
+            const fechaInput = document.getElementById('fechaCotizacion');
+            if (fechaInput) fechaInput.valueAsDate = new Date();
+            
+            // Duplicar productos con nuevos IDs
+            productos = productos.map(p => ({ ...p, id: Date.now() + Math.random() }));
+            
+            actualizarTabla();
+            programarAutoguardado();
+            alert('✅ Cotización duplicada. Revisa el nuevo número correlativo.');
+        }
+        
+        // =============================================================
+        // COMPARTIR POR WHATSAPP
+        // =============================================================
+        
+        function compartirWhatsApp() {
+            if (productos.length === 0) { alert('Agrega items primero para compartir.'); return; }
+            
+            const cliente = document.getElementById('nombreCliente').value || 'Estimado/a';
+            const numero = document.getElementById('numCotizacion').value;
+            const total = document.getElementById('total').value;
+            const vigencia = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
+            
+            let mensaje = `*COTIZACIÓN ${numero}*%0A%0A`;
+            mensaje += `Hola ${escapeHTML(cliente)},%0A%0A`;
+            mensaje += `Te comparto el resumen de tu cotización:%0A%0A`;
+            
+            productos.slice(0, 10).forEach(p => {
+                mensaje += `• ${p.descripcion.substring(0, 40)}${p.descripcion.length > 40 ? '...' : ''}%0A`;
+                mensaje += `  ${p.cantidad} x $${formato(p.precioVenta)} = $${formato(p.subtotal)}%0A`;
+            });
+            
+            if (productos.length > 10) {
+                mensaje += `%0A... y ${productos.length - 10} items más%0A`;
+            }
+            
+            mensaje += `%0A*TOTAL: ${total}*%0A`;
+            mensaje += `Válida hasta: ${vigencia}%0A%0A`;
+            mensaje += `Cualquier consulta, con gusto te atiendo.%0A`;
+            mensaje += `— Cristian Borquez`;
+            
+            const fono = document.getElementById('fonoCliente').value.replace(/[^0-9]/g, '');
+            let url;
+            if (fono && fono.length >= 8) {
+                url = `https://wa.me/${fono}?text=${mensaje}`;
+            } else {
+                url = `https://wa.me/?text=${mensaje}`;
+            }
+            
+            window.open(url, '_blank');
+        }
+        
+        // =============================================================
+        // AUTOGUARDADO
+        // =============================================================
+        
+        function programarAutoguardado() {
+            actualizarEstadoAutoguardado('Guardando...', true);
+            if (autosaveTimer) clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(guardarBorrador, 2000);
+        }
+        
+        function guardarBorrador() {
+            const borrador = {
+                numero: document.getElementById('numCotizacion').value,
+                fecha: document.getElementById('fechaCotizacion').value,
+                cliente: document.getElementById('nombreCliente').value,
+                fono: document.getElementById('fonoCliente').value,
+                observaciones: document.getElementById('observaciones').value,
+                notasInternas: document.getElementById('notasInternas').value,
+                estilo: obtenerEstiloCotizacion(),
+                ivaPorcentaje: getNum('ivaPorcentaje'),
+                fletePorcentaje: getNum('fletePorcentaje'),
+                productos: [...productos],
+                fechaGuardado: new Date().toISOString()
+            };
+            guardarLS('cotizador_borrador', borrador);
+            actualizarEstadoAutoguardado('Guardado ' + new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'}), false, true);
+        }
+        
+        function cargarBorradorAutoguardado() {
+            const borrador = cargarLS('cotizador_borrador', null);
+            if (!borrador || !borrador.productos || borrador.productos.length === 0) return;
+            
+            const haceMs = Date.now() - new Date(borrador.fechaGuardado).getTime();
+            const haceHoras = haceMs / (1000 * 60 * 60);
+            
+            if (haceHoras > 24) {
+                localStorage.removeItem('cotizador_borrador');
+                return;
+            }
+            
+            if (confirm(`📝 Se encontró un borrador guardado el ${new Date(borrador.fechaGuardado).toLocaleString('es-CL')}.\n\n¿Deseas recuperarlo?`)) {
+                document.getElementById('numCotizacion').value = borrador.numero;
+                document.getElementById('fechaCotizacion').value = borrador.fecha;
+                document.getElementById('nombreCliente').value = borrador.cliente || '';
+                document.getElementById('fonoCliente').value = borrador.fono || '';
+                document.getElementById('observaciones').value = borrador.observaciones || '';
+                document.getElementById('notasInternas').value = borrador.notasInternas || '';
+                establecerEstiloCotizacion(borrador.estilo);
+                document.getElementById('ivaPorcentaje').value = borrador.ivaPorcentaje ?? 19;
+                document.getElementById('fletePorcentaje').value = borrador.fletePorcentaje ?? 0;
+                productos = [...borrador.productos];
+                actualizarTabla();
+            } else {
+                localStorage.removeItem('cotizador_borrador');
+            }
+        }
+        
+        function actualizarEstadoAutoguardado(texto, guardando, guardado) {
+            const el = document.getElementById('autosaveStatus');
+            el.classList.remove('saving', 'saved');
+            if (guardando) el.classList.add('saving');
+            if (guardado) el.classList.add('saved');
+            el.textContent = '💾 ' + texto;
+        }
+        
+        // =============================================================
+        // GENERACIÓN DE PDF
+        // =============================================================
+        
+        function aplicarEstiloPDF() {
+            const box = document.getElementById('pdfRenderBox');
+            const estilo = obtenerEstiloCotizacion();
+            box.classList.remove('pdf-style-professional','pdf-style-premium','pdf-style-professional-premium');
+            box.classList.add('pdf-style-' + estilo);
+            return estilo;
+        }
+        
+        function agregarSeguridadPDF(pdf) {
+            const totalPaginas = pdf.getNumberOfPages();
+            const sello = 'CB • CRISTIAN BORQUEZ • DOCUMENTO PROTEGIDO';
+            for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+                pdf.setPage(pagina);
+                let transparenciaAplicada = false;
+                try {
+                    if (typeof pdf.GState === 'function' && typeof pdf.setGState === 'function') {
+                        pdf.setGState(new pdf.GState({ opacity: 0.18 }));
+                        transparenciaAplicada = true;
+                    }
+                } catch (e) {}
+                try {
+                    if (typeof pdf.setGState === 'function' && typeof pdf.GState === 'function') {
+                        pdf.setGState(new pdf.GState({ opacity: 0.14 }));
+                    }
+                } catch (e) {}
+                pdf.setTextColor(90, 100, 115);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                const margen = 5;
+                const ancho = 62;
+                const alto = 9;
+                const posiciones = [
+                    [margen, margen + 5],
+                    [210 - margen, margen + 5],
+                    [margen, 297 - margen],
+                    [210 - margen, 297 - margen]
+                ];
+                posiciones.forEach(([x, y], indice) => {
+                    const alineacion = (indice === 1 || indice === 3) ? 'right' : 'left';
+                    const xx = alineacion === 'right' ? x : x;
+                    pdf.roundedRect(
+                        indice === 1 || indice === 3 ? x - ancho : x,
+                        indice >= 2 ? y - alto : y - 5,
+                        ancho, alto, 2, 2, 'S'
+                    );
+                    pdf.text(sello, xx, indice >= 2 ? y - 3 : y, { align: alineacion });
+                });
+                try {
+                    if (typeof pdf.setGState === 'function' && typeof pdf.GState === 'function') {
+                        pdf.setGState(new pdf.GState({ opacity: 0.10 }));
+                    }
+                } catch (e) {}
+                pdf.setTextColor(170, 175, 185);
+                pdf.setFontSize(18);
+                pdf.text('CB • CRISTIAN BORQUEZ', 105, 150, { align: 'center', angle: 45 });
+                try {
+                    if (typeof pdf.setGState === 'function' && typeof pdf.GState === 'function') {
+                        pdf.setGState(new pdf.GState({ opacity: 1 }));
+                    }
+                } catch (e) {}
+                try {
+                    if (typeof pdf.setGState === 'function' && typeof pdf.GState === 'function') {
+                        pdf.setGState(new pdf.GState({ opacity: 1 }));
+                    }
+                } catch (e) {}
+            }
+        }
+        
+        async function generarPDF() {
+            if (productos.length === 0) return alert('Agrega items primero para generar el PDF');
+            aplicarEstiloPDF();
+            document.getElementById('pdfVigencia').textContent = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
+            document.getElementById('pdfNum').textContent = document.getElementById('numCotizacion').value;
+            document.getElementById('pdfFecha').textContent = document.getElementById('fechaCotizacion').value;
+            document.getElementById('pdfCliente').textContent = document.getElementById('nombreCliente').value || 'N/A';
+            document.getElementById('pdfFono').textContent = document.getElementById('fonoCliente').value || 'N/A';
+            document.getElementById('pdfObs').textContent = document.getElementById('observaciones').value || 'N/A';
+            
+            const tbody = document.getElementById('pdfTablaBody');
+            tbody.innerHTML = '';
+            productos.forEach(p => {
+                const tr = document.createElement('tr');
+                const descuentoTxt = p.descuento > 0 ? ` (-${p.descuento}%)` : '';
+                tr.innerHTML = `
+                    <td>${escapeHTML(p.descripcion)}${descuentoTxt}</td>
+                    <td style="text-align:center;">${p.cantidad}</td>
+                    <td style="text-align:center;">${p.descuento > 0 ? p.descuento + '%' : '—'}</td>
+                    <td style="text-align:right;">$${formato(p.precioVenta)}</td>
+                    <td style="text-align:right;">$${formato(p.subtotal)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('pdfSubtotal').textContent = document.getElementById('subtotal').value;
+            document.getElementById('pdfIvaPct').textContent = document.getElementById('ivaPorcentaje').value;
+            document.getElementById('pdfIva').textContent = document.getElementById('iva').value;
+            document.getElementById('pdfFletePct').textContent = document.getElementById('fletePorcentaje').value;
+            document.getElementById('pdfFlete').textContent = document.getElementById('fleteMonto').value;
+            document.getElementById('pdfTotal').textContent = document.getElementById('total').value;
+            
+            const element = document.getElementById('pdfRenderBox');
+            
+            try {
+                const canvas = await html2canvas(element, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const imgHeight = (canvas.height * pageWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+                heightLeft -= pageHeight;
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                agregarSeguridadPDF(pdf);
+                pdf.setProperties({
+                    title: `Cotización ${document.getElementById('numCotizacion').value}`,
+                    subject: 'Cotización Pro Híbrido - Documento protegido',
+                    author: 'Cristian Borquez',
+                    creator: 'Cotizador Pro Híbrido V3.2 Local',
+                    keywords: 'Cristian Borquez, Cotización, Solar, Pro Híbrido, Documento protegido'
+                });
+                pdf.save(`${document.getElementById('numCotizacion').value}.pdf`);
+            } catch (err) {
+                console.error(err);
+                alert('Error al generar PDF.');
+            }
+        }
+        
+        // =============================================================
+        // GUARDAR / CARGAR HISTORIAL
+        // =============================================================
+        
+        function guardarCotizacion() {
+            if (productos.length === 0) return alert('Agrega items antes de guardar');
+            if (!document.getElementById('nombreCliente').value.trim() && !confirm('La cotización se guardará sin nombre de cliente. ¿Continuar?')) return;
+            
+            const numCot = document.getElementById('numCotizacion').value;
+            const fechaCot = document.getElementById('fechaCotizacion').value;
+            const cliente = document.getElementById('nombreCliente').value || 'Sin nombre';
+            const fono = document.getElementById('fonoCliente').value;
+            const obs = document.getElementById('observaciones').value;
+            const notasInt = document.getElementById('notasInternas').value;
+            
+            const cotizacion = {
+                numero: numCot,
+                fecha: fechaCot,
+                cliente: cliente,
+                fono: fono,
+                observaciones: obs,
+                notasInternas: notasInt,
+                estilo: obtenerEstiloCotizacion(),
+                ivaPorcentaje: getNum('ivaPorcentaje'),
+                fletePorcentaje: getNum('fletePorcentaje'),
+                total: getMoney('total'),
+                productos: [...productos]
+            };
+            
+            if (idCotizacionActual) {
+                const index = historial.findIndex(x => x.id === idCotizacionActual);
+                if (index !== -1) {
+                    historial[index] = { id: idCotizacionActual, ...cotizacion };
+                    alert('✅ Cotización ' + numCot + ' actualizada exitosamente');
+                }
+            } else {
+                idCotizacionActual = Date.now();
+                historial.unshift({ id: idCotizacionActual, ...cotizacion });
+                alert('✅ Cotización ' + numCot + ' guardada con éxito');
+            }
+            
+            guardarLS('cotizador_historial', historial);
+            localStorage.removeItem('cotizador_borrador');
+            actualizarEstadoAutoguardado('Guardado en historial', false, true);
+        }
+        
+        function renderizarHistorial() {
+            const c = document.getElementById('listaHistorial');
+            const filtro = (document.getElementById('buscadorHistorial').value || '').toLowerCase();
+            
+            const filtrados = historial.filter(x => 
+                (x.numero && x.numero.toLowerCase().includes(filtro)) || 
+                (x.cliente && x.cliente.toLowerCase().includes(filtro))
+            );
+            
+            if (filtrados.length === 0) {
+                c.innerHTML = '<p style="text-align:center;color:#888;padding:20px">Sin cotizaciones guardadas</p>';
+                return;
+            }
+            
+            c.innerHTML = filtrados.map(x => `
+                <div class="historial-item">
+                    <div style="flex:1;min-width:200px;">
+                        <strong>${escapeHTML(x.numero)}</strong> — ${escapeHTML(x.cliente)}<br>
+                        <small>📅 ${x.fecha} | 📦 ${x.productos ? x.productos.length : 0} items | Total: <strong style="color:#0B2A4A;">$${formato(x.total || 0)}</strong></small>
+                        ${x.notasInternas ? `<br><small style="color:#F5A400;">📝 Tiene notas internas</small>` : ''}
+                    </div>
+                    <div class="acciones-historial">
+                        <button class="btn-primary btn-sm" onclick="cargarCotizacionParaEditar(${x.id})">✏️ Cargar</button>
+                        <button class="btn-info btn-sm" onclick="duplicarDesdeHistorial(${x.id})">📋 Copiar</button>
+                        <button class="btn-danger btn-sm" onclick="eliminarDelHistorial(${x.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function cargarCotizacionParaEditar(id) {
+            const item = historial.find(x => x.id === id);
+            if (!item) return;
+            idCotizacionActual = item.id;
+            document.getElementById('numCotizacion').value = item.numero;
+            document.getElementById('fechaCotizacion').value = item.fecha;
+            document.getElementById('nombreCliente').value = item.cliente;
+            document.getElementById('fonoCliente').value = item.fono || '';
+            document.getElementById('observaciones').value = item.observaciones || '';
+            document.getElementById('notasInternas').value = item.notasInternas || '';
+            establecerEstiloCotizacion(item.estilo || 'professional-premium');
+            document.getElementById('ivaPorcentaje').value = item.ivaPorcentaje !== undefined ? item.ivaPorcentaje : 19;
+            document.getElementById('fletePorcentaje').value = item.fletePorcentaje !== undefined ? item.fletePorcentaje : 0;
+            productos = [...item.productos];
+            actualizarTabla();
+            cambiarTab('cotizacion', { target: document.querySelector('.tab:first-child') });
+            alert('📑 Cotización ' + item.numero + ' cargada.');
+        }
+        
+        function duplicarDesdeHistorial(id) {
+            const item = historial.find(x => x.id === id);
+            if (!item) return;
+            
+            if (!confirm(`Duplicar cotización ${item.numero} como una nueva?`)) return;
+            
+            idCotizacionActual = null;
+            generarNuevoCorrelativo();
+            const fechaInput = document.getElementById('fechaCotizacion');
+            if (fechaInput) fechaInput.valueAsDate = new Date();
+            
+            document.getElementById('nombreCliente').value = item.cliente;
+            document.getElementById('fonoCliente').value = item.fono || '';
+            document.getElementById('observaciones').value = item.observaciones || '';
+            document.getElementById('notasInternas').value = '';
+            establecerEstiloCotizacion(item.estilo || 'professional-premium');
+            document.getElementById('ivaPorcentaje').value = item.ivaPorcentaje ?? 19;
+            document.getElementById('fletePorcentaje').value = item.fletePorcentaje ?? 0;
+            
+            productos = item.productos.map(p => ({ ...p, id: Date.now() + Math.random() }));
+            actualizarTabla();
+            cambiarTab('cotizacion', { target: document.querySelector('.tab:first-child') });
+            programarAutoguardado();
+        }
+        
+        function eliminarDelHistorial(id) {
+            if (confirm('¿Eliminar esta cotización del historial?')) {
+                historial = historial.filter(x => x.id !== id);
+                guardarLS('cotizador_historial', historial);
+                renderizarHistorial();
+                if (idCotizacionActual === id) nuevaCotizacion();
+            }
+        }
+        
+        function borrarTodoHistorial() {
+            if (historial.length === 0) { alert('No hay cotizaciones para borrar.'); return; }
+            if (!confirm(`⚠️ ¿ELIMINAR LAS ${historial.length} COTIZACIONES DEL HISTORIAL?\n\nEsta acción no se puede deshacer.`)) return;
+            if (!confirm('¿Estás SEGURO/A? Se perderán todos los datos.')) return;
+            
+            historial = [];
+            guardarLS('cotizador_historial', historial);
+            renderizarHistorial();
+            alert('🗑️ Historial borrado completamente.');
+        }
+        
+        // =============================================================
+        // RESPALDO / IMPORTACIÓN
+        // =============================================================
+        
+        function exportarRespaldo() {
+            const data = {
+                aplicacion: 'Cotizador Pro Híbrido',
+                version: '3.2-local',
+                fechaRespaldo: new Date().toISOString(),
+                cotizaciones: historial,
+                plantillas: plantillas,
+                historialPrecios: historialPrecios
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `respaldo_cotizaciones_v32_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importarRespaldo(event) {
+            const archivo = event.target.files && event.target.files[0];
+            if (!archivo) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = JSON.parse(reader.result);
+                    const lista = Array.isArray(data) ? data : data.cotizaciones;
+                    if (!Array.isArray(lista)) throw new Error('Formato inválido');
+                    if (!confirm(`Se importarán ${lista.length} cotización(es). ¿Continuar?`)) return;
+                    
+                    const mapa = new Map(historial.map(x => [String(x.id), x]));
+                    lista.forEach(x => {
+                        if (!x || !x.id || !Array.isArray(x.productos)) return;
+                        mapa.set(String(x.id), x);
+                    });
+                    historial = Array.from(mapa.values()).sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+                    
+                    // Importar plantillas si existen
+                    if (Array.isArray(data.plantillas)) {
+                        const mapaPlant = new Map(plantillas.map(x => [String(x.id), x]));
+                        data.plantillas.forEach(x => { if (x && x.id) mapaPlant.set(String(x.id), x); });
+                        plantillas = Array.from(mapaPlant.values());
+                        guardarLS('cotizador_plantillas', plantillas);
+                    }
+                    
+                    guardarLS('cotizador_historial', historial);
+                    renderizarHistorial();
+                    alert('✅ Respaldo importado correctamente.');
+                } catch (e) {
+                    alert('El archivo seleccionado no es un respaldo válido del cotizador.');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(archivo, 'utf-8');
+        }
+        
+        // =============================================================
+        // INICIAR APLICACIÓN
+        // =============================================================
+        
+        // Inicialización autenticada a cargo de server_bridge.js
+    </script>
+<script src="/assets/server_bridge.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    console.log('SW registrado:', reg.scope);
+  }).catch((err) => {
+    console.log('Error SW:', err);
+  });
+}
+</script></body>
+</html>
+
+
