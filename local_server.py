@@ -22,7 +22,7 @@ with connect() as c:
  c.executescript('''CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,username TEXT UNIQUE COLLATE NOCASE,email TEXT UNIQUE COLLATE NOCASE,name TEXT,password TEXT,role TEXT,status TEXT DEFAULT 'activo',reset TEXT,reset_exp REAL);
  CREATE TABLE IF NOT EXISTS licenses(pin TEXT PRIMARY KEY,user_id INTEGER,device TEXT,revoked INTEGER DEFAULT 0);
  CREATE TABLE IF NOT EXISTS quotes(user_id INTEGER,id TEXT,payload TEXT,PRIMARY KEY(user_id,id));''')
- # Migración aditiva: conservar cuentas, cotizaciones y licencias ya activadas.
+ # MigraciÃ³n aditiva: conservar cuentas, cotizaciones y licencias ya activadas.
  columns={r[1] for r in c.execute('PRAGMA table_info(licenses)')}
  for name,kind in [('license_id','TEXT'),('created_at','REAL DEFAULT 0'),('expires_at','REAL DEFAULT 0'),('used_at','REAL'),('is_invite','INTEGER DEFAULT 0')]:
   if name not in columns:c.execute('ALTER TABLE licenses ADD COLUMN '+name+' '+kind)
@@ -52,7 +52,10 @@ class Handler(BaseHTTPRequestHandler):
   ct='application/javascript' if name.endswith('.js') else ('application/json' if name.endswith('.json') else 'text/html; charset=utf-8')
   self.send_header('Content-Type',ct); self.send_header('Content-Length',str(len(b))); self.end_headers(); self.wfile.write(b)
  def do_POST(self):
-  if self.headers.get('Origin') and self.headers['Origin']!='http://'+self.headers.get('Host',''): return self.respond({'detail':'Origen inválido'},403)
+  origin=self.headers.get('Origin','')
+  host=self.headers.get('Host','')
+  allowed=['http://'+host,'https://'+host]
+  if origin and origin not in allowed: return self.respond({'detail':'Origen invalido'},403)
   self.api()
  def api(self):
   try:
@@ -62,7 +65,7 @@ class Handler(BaseHTTPRequestHandler):
     x=json.loads(self.rfile.read(n)) if n else {}; p=self.path
     def fail(msg): raise ValueError(msg)
     def strong(pw):
-     if len(pw)<10: fail('La contraseña necesita al menos 10 caracteres')
+     if len(pw)<10: fail('La contraseÃ±a necesita al menos 10 caracteres')
     if p=='/api/setup': return self.respond({'needed':c.execute('SELECT count(*) FROM users').fetchone()[0]==0})
     if p in ['/api/auth/setup','/api/auth/register']:
      first=c.execute('SELECT count(*) FROM users').fetchone()[0]==0
@@ -73,17 +76,17 @@ class Handler(BaseHTTPRequestHandler):
       return len(value)<=254 and value.count('@')==1 and bool(value.split('@')[0]) and '.' in value.split('@')[-1] and not any(ch.isspace() for ch in value)
      if '@' in user:
       user=user.lower()
-      if not valid_email(user): fail('Ingrese un correo válido en Usuario o correo')
+      if not valid_email(user): fail('Ingrese un correo vÃ¡lido en Usuario o correo')
       if not email: email=user
      if len(user)<3 or len(user)>254 or any(ch.isspace() for ch in user): fail('El usuario debe tener al menos 3 caracteres y no contener espacios')
      if email and not valid_email(email): fail('Revise el formato del correo opcional')
-     if c.execute('SELECT 1 FROM users WHERE username IN (?,?) OR email IN (?,?)',(user,email,user,email)).fetchone(): fail('Este usuario o correo ya está registrado')
+     if c.execute('SELECT 1 FROM users WHERE username IN (?,?) OR email IN (?,?)',(user,email,user,email)).fetchone(): fail('Este usuario o correo ya estÃ¡ registrado')
      strong(x.get('password',''))
      invite=None
      if not first:
       raw_pin=x.get('pin','').strip().upper()
       invite=c.execute('SELECT * FROM licenses WHERE pin=? AND user_id IS NULL AND device IS NULL AND revoked=0',(digest(raw_pin),)).fetchone()
-      if not invite: fail('PIN de registro inválido o ya utilizado. Solicita uno al administrador')
+      if not invite: fail('PIN de registro invÃ¡lido o ya utilizado. Solicita uno al administrador')
       if (invite['expires_at'] or 0)<=time.time(): fail('PIN de registro vencido. Solicita uno nuevo al administrador')
      c.execute('INSERT INTO users(username,email,name,password,role) VALUES(?,?,?,?,?)',(user,email,x.get('name',''),password(x['password']),'admin' if first else 'vendedor'))
      new_id=c.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -94,7 +97,7 @@ class Handler(BaseHTTPRequestHandler):
      return self.respond({'ok':True,'licensed':bool(invite)})
     if p=='/api/auth/reset':
      u=c.execute('SELECT * FROM users WHERE username=? OR email=?',(x.get('username',''),x.get('email',''))).fetchone()
-     if not u or not u['reset'] or u['reset_exp']<time.time() or not hmac.compare_digest(u['reset'],digest(x.get('code',''))): fail('Código inválido o vencido')
+     if not u or not u['reset'] or u['reset_exp']<time.time() or not hmac.compare_digest(u['reset'],digest(x.get('code',''))): fail('CÃ³digo invÃ¡lido o vencido')
      strong(x.get('password','')); c.execute('UPDATE users SET password=?,reset=NULL WHERE id=?',(password(x['password']),u['id']))
      for k in list(SESSIONS):
       if SESSIONS[k][0]==u['id']: del SESSIONS[k]
@@ -109,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
      return self.respond({'access_token':token,'user':{'id':u['id'],'username':u['username'],'role':u['role']}})
     token=self.headers.get('Authorization','').removeprefix('Bearer '); session=SESSIONS.get(token)
     u=c.execute('SELECT * FROM users WHERE id=?',(session[0],)).fetchone() if session and session[1]>time.time() else None
-    if not u or u['status']!='activo': return self.respond({'detail':'Sesión inválida o cuenta restringida'},401)
+    if not u or u['status']!='activo': return self.respond({'detail':'SesiÃ³n invÃ¡lida o cuenta restringida'},401)
     if p=='/api/auth/logout': SESSIONS.pop(token,None); return self.respond({'ok':True})
     if p=='/api/me': return self.respond({'id':u['id'],'username':u['username'],'role':u['role']})
     if p.startswith('/api/admin/'):
@@ -127,7 +130,7 @@ class Handler(BaseHTTPRequestHandler):
      if p=='/api/admin/invitations/delete':
       r=c.execute('SELECT * FROM licenses WHERE license_id=? AND is_invite=1',(x['license_id'],)).fetchone()
       if not r:fail('PIN de registro no encontrado')
-      if r['used_at'] or r['device']:fail('Este PIN ya se usó y no se puede eliminar como PIN pendiente')
+      if r['used_at'] or r['device']:fail('Este PIN ya se usÃ³ y no se puede eliminar como PIN pendiente')
       c.execute('DELETE FROM licenses WHERE license_id=?',(x['license_id'],));record(c,u['id'],None,'eliminar_PIN_registro',x['license_id']);return self.respond({'ok':True})
      if p=='/api/admin/users': return self.respond([dict(r) for r in c.execute('SELECT id,username,email,name,role,status,(SELECT count(*) FROM quotes WHERE user_id=users.id) AS quote_count FROM users')])
      if p=='/api/admin/licenses':
@@ -150,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
       c.execute('UPDATE licenses SET revoked=1 WHERE license_id=?',(x['license_id'],));record(c,u['id'],target,'cesar_licencia',x['license_id']);return self.respond({'ok':True})
      if p.endswith('/status'):
 
-      if x['status'] not in ['activo','bloqueado','suspendido']: fail('Estado inválido')
+      if x['status'] not in ['activo','bloqueado','suspendido']: fail('Estado invÃ¡lido')
       c.execute('UPDATE users SET status=? WHERE id=?',(x['status'],target))
      elif p.endswith('/delete'):
       c.execute('DELETE FROM users WHERE id=?',(target,)); c.execute('DELETE FROM licenses WHERE user_id=?',(target,)); c.execute('DELETE FROM quotes WHERE user_id=?',(target,))
@@ -163,7 +166,7 @@ class Handler(BaseHTTPRequestHandler):
      elif p.endswith('/revoke'): c.execute('UPDATE licenses SET revoked=1 WHERE user_id=?',(target,))
      elif p.endswith('/reset'):
       code=secrets.token_urlsafe(24); c.execute('UPDATE users SET reset=?,reset_exp=? WHERE id=?',(digest(code),time.time()+1800,target)); record(c,u['id'],target,'reset',x.get('status','')); return self.respond({'code':code})
-     else: fail('Acción desconocida')
+     else: fail('AcciÃ³n desconocida')
      record(c,u['id'],target,p.rsplit('/',1)[-1],x.get('status',''))
      for k in list(SESSIONS):
       if SESSIONS[k][0]==target: del SESSIONS[k]
@@ -173,9 +176,9 @@ class Handler(BaseHTTPRequestHandler):
      return self.respond({'active':active,'username':u['username']})
     if p=='/api/license/activate':
      r=c.execute('SELECT * FROM licenses WHERE pin=? AND user_id=? AND revoked=0',(digest(x.get('pin','')),u['id'])).fetchone()
-     if not r: fail('PIN inválido, eliminado o cesado')
+     if not r: fail('PIN invÃ¡lido, eliminado o cesado')
      if r['device']: fail('Este PIN ya fue utilizado. Cada PIN se activa una sola vez')
-     if (r['expires_at'] or 0)<=time.time(): fail('El PIN caducó. Solicite uno nuevo al administrador')
+     if (r['expires_at'] or 0)<=time.time(): fail('El PIN caducÃ³. Solicite uno nuevo al administrador')
      c.execute('UPDATE licenses SET device=?,used_at=? WHERE pin=?',(DEVICE,time.time(),r['pin']))
      record(c,u['id'],u['id'],'activar_licencia',r['license_id'])
      return self.respond({'ok':True})
@@ -189,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
      return self.respond([json.loads(r[0]) for r in c.execute('SELECT payload FROM quotes WHERE user_id=?',(u['id'],))])
     if p=='/api/local/delete': c.execute('DELETE FROM quotes WHERE user_id=? AND id=?',(u['id'],str(x['id']))); return self.respond({'ok':True})
     return self.respond({'detail':'Ruta desconocida'},404)
-  except (ValueError,KeyError,sqlite3.IntegrityError) as e: self.respond({'detail':'Datos inválidos o usuario/correo duplicado' if isinstance(e,sqlite3.IntegrityError) else str(e)},400)
+  except (ValueError,KeyError,sqlite3.IntegrityError) as e: self.respond({'detail':'Datos invÃ¡lidos o usuario/correo duplicado' if isinstance(e,sqlite3.IntegrityError) else str(e)},400)
 if __name__=='__main__':
   import sys, socket
   # Render asigna PORT; local usa COTIZADOR_PORT
@@ -204,7 +207,7 @@ if __name__=='__main__':
    except OSError:continue
   if server is None:raise SystemExit('ERROR: No hay puertos disponibles entre '+str(requested)+' y '+str(requested+19))
   url='http://'+host+':'+str(server.server_port)
-  print('Cotizador Pro Hibrido iniciado en '+url+' — Ctrl+C para detener',flush=True)
+  print('Cotizador Pro Hibrido iniciado en '+url+' â Ctrl+C para detener',flush=True)
   if '--open' in sys.argv and host=='127.0.0.1':
    import webbrowser
    threading.Timer(1,lambda:webbrowser.open(url)).start()
