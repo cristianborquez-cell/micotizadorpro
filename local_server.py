@@ -1,7 +1,7 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 import os, sqlite3, json, secrets, hashlib, hmac, time, uuid, platform, threading
-ROOT=Path(__file__).resolve().parent  # updated v22
+ROOT=Path(__file__).resolve().parent  # updated v23
 DATA=Path(os.environ.get('COTIZADOR_DATA',str(ROOT/'data'))); DATA.mkdir(exist_ok=True)
 DB=DATA/'local.db'
 DEVICE=hashlib.sha256((platform.node()+str(uuid.getnode())).encode()).hexdigest()
