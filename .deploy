@@ -1,2 +1,3 @@
-deploy-trigger-1795304302720
-# Force redeploy - 2026-11-21T23:38:22.720Z
+deploy-trigger-1795304322250
+# Force redeploy - 2026-11-21T23:38:42.250Z
+# Updated do_GET to serve /admin and android_login.html
