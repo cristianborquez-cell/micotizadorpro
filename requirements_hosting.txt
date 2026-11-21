@@ -1,0 +1,4 @@
+# Cotizador Pro Híbrido — dependencias para hosting
+# El servidor local usa solo biblioteca estándar de Python
+# Para WSGI en hosting:
+wsgiref==0.1.2

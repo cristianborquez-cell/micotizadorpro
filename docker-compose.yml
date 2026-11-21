@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cotizador
+      POSTGRES_USER: cotizador
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U cotizador -d cotizador"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://cotizador:${POSTGRES_PASSWORD}@db:5432/cotizador
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en .env}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+    expose: ["8080"]
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
