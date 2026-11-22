@@ -93,6 +93,18 @@ if IS_PG:
                 user_id BIGINT,
                 action TEXT,
                 detail TEXT
+            );
+            CREATE TABLE IF NOT EXISTS user_profiles(
+                user_id BIGINT PRIMARY KEY,
+                nombres TEXT,
+                apellidos TEXT,
+                run TEXT,
+                razon_social TEXT,
+                rut TEXT,
+                email TEXT,
+                telefono TEXT,
+                direccion TEXT,
+                updated_at DOUBLE PRECISION
             )
             ''')
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS license_identity ON licenses(license_id)')
@@ -131,6 +143,7 @@ CREATE TABLE IF NOT EXISTS quotes(user_id INTEGER,id TEXT,payload TEXT,PRIMARY K
             c.execute('UPDATE licenses SET is_invite=1 WHERE user_id IS NULL AND device IS NULL')
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS license_identity ON licenses(license_id)')
             c.execute('CREATE TABLE IF NOT EXISTS admin_events(id INTEGER PRIMARY KEY,at REAL,actor_id INTEGER,user_id INTEGER,action TEXT,detail TEXT)')
+            c.execute('CREATE TABLE IF NOT EXISTS user_profiles(user_id INTEGER PRIMARY KEY,nombres TEXT,apellidos TEXT,run TEXT,razon_social TEXT,rut TEXT,email TEXT,telefono TEXT,direccion TEXT,updated_at REAL)')
 
 
 def digest(s):
@@ -451,6 +464,118 @@ class Handler(BaseHTTPRequestHandler):
                         fail('El PIN caducó. Solicite uno nuevo al administrador')
                     c.execute('UPDATE licenses SET device=?,used_at=? WHERE pin=?', (DEVICE, time.time(), r['pin']))
                     record(c, row_get(u, 'id'), row_get(u, 'id'), 'activar_licencia', r['license_id'])
+                    return self.respond({'ok': True})
+
+                if p == '/api/license/request':
+                    def clean_rut(v):
+                        v = (v or '').strip().upper().replace('.', '').replace(' ', '')
+                        if not v: return ''
+                        if '-' not in v and len(v) >= 2: v = v[:-1] + '-' + v[-1]
+                        body, dv = v.split('-') if '-' in v else (v[:-1], v[-1])
+                        body = ''.join(ch for ch in body if ch.isdigit())
+                        if len(body) == 7: body = '0' + body  # 0 fantasma para cumplir 8 dígitos
+                        return body + '-' + dv
+                    def rut_valido(v):
+                        v = clean_rut(v)
+                        if not v or '-' not in v: return False
+                        body, dv = v.split('-')
+                        if len(body) != 8 or not body.isdigit(): return False
+                        if dv not in '0123456789K': return False
+                        mult, s = 2, 0
+                        for d in reversed(body):
+                            s += int(d) * mult
+                            mult = mult + 1 if mult < 7 else 2
+                        rest = 11 - (s % 11)
+                        dv_calc = '0' if rest == 11 else 'K' if rest == 10 else str(rest)
+                        return dv_calc == dv
+                    nombres = (x.get('nombres') or '').strip()[:120]
+                    apellidos = (x.get('apellidos') or '').strip()[:120]
+                    run = clean_rut(x.get('run'))
+                    razon = (x.get('razon_social') or '').strip()[:200]
+                    rut = clean_rut(x.get('rut'))
+                    email = (x.get('email') or '').strip().lower()[:254]
+                    telefono = (x.get('telefono') or '').strip().replace(' ', '')[:20]
+                    direccion = (x.get('direccion') or '').strip()[:300]
+                    if not nombres or not apellidos: fail('Ingrese nombres y apellidos')
+                    if not rut_valido(run): fail('RUN inválido. Use formato XXXXXXXX-X o K con dígito verificador válido')
+                    if not razon: fail('Ingrese razón social o nombre de fantasía')
+                    if not rut_valido(rut): fail('RUT inválido. Use formato XXXXXXXX-X o K con dígito verificador válido')
+                    if not email or email.count('@') != 1 or '.' not in email.split('@')[-1] or any(ch.isspace() for ch in email): fail('Ingrese un correo electrónico válido')
+                    import re
+                    if not re.fullmatch(r'\+569\d{8}', telefono): fail('Teléfono inválido. Use formato +56912345678')
+                    if not direccion: fail('Ingrese dirección')
+                    smtp_host = os.environ.get('SMTP_HOST', '').strip()
+                    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+                    smtp_user = os.environ.get('SMTP_USER', '').strip()
+                    smtp_pass = os.environ.get('SMTP_PASS', '').strip()
+                    smtp_from = os.environ.get('SMTP_FROM', smtp_user).strip()
+                    smtp_tls = os.environ.get('SMTP_TLS', '1').strip() != '0'
+                    msg_body = f"""Solicitud de datos / activación Cotizador Pro
+
+Nombres: {nombres}
+Apellidos: {apellidos}
+RUN: {run}
+Razón social / Nombre fantasía: {razon}
+RUT: {rut}
+Correo: {email}
+Teléfono: {telefono}
+Dirección: {direccion}
+Usuario cuenta: {row_get(u,'username')}
+ID usuario: {row_get(u,'id')}
+"""
+                    # guardar perfil del usuario
+                    c.execute("""INSERT INTO user_profiles(user_id,nombres,apellidos,run,razon_social,rut,email,telefono,direccion,updated_at)
+                                 VALUES(?,?,?,?,?,?,?,?,?,?)
+                                 ON CONFLICT(user_id) DO UPDATE SET nombres=excluded.nombres,apellidos=excluded.apellidos,run=excluded.run,razon_social=excluded.razon_social,rut=excluded.rut,email=excluded.email,telefono=excluded.telefono,direccion=excluded.direccion,updated_at=excluded.updated_at""",
+                              (row_get(u,'id'), nombres, apellidos, run, razon, rut, email, telefono, direccion, time.time()))
+                    if not smtp_host or not smtp_from:
+                        return self.respond({'ok': True, 'saved': True, 'email_sent': False, 'detail': 'Datos guardados. El correo no está configurado en el servidor (SMTP_HOST/SMTP_FROM). Contacte al administrador.'})
+                    msg = EmailMessage()
+                    msg['Subject'] = f'Solicitud de activación - {nombres} {apellidos}'
+                    msg['From'] = smtp_from
+                    msg['To'] = email
+                    admin_copy = os.environ.get('ADMIN_NOTIFY_EMAIL', smtp_from).strip()
+                    if admin_copy and admin_copy.lower() != email.lower():
+                        msg['Cc'] = admin_copy
+                    msg.set_content(msg_body)
+                    try:
+                        recipients = [email] + ([admin_copy] if admin_copy and admin_copy.lower() != email.lower() else [])
+                        if smtp_port == 465:
+                            ctx = ssl.create_default_context()
+                            with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx, timeout=20) as s:
+                                if smtp_user: s.login(smtp_user, smtp_pass)
+                                s.send_message(msg)
+                        else:
+                            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as s:
+                                s.ehlo()
+                                if smtp_tls:
+                                    s.starttls(context=ssl.create_default_context())
+                                    s.ehlo()
+                                if smtp_user: s.login(smtp_user, smtp_pass)
+                                s.send_message(msg)
+                    except Exception as e:
+                        return self.respond({'ok': True, 'saved': True, 'email_sent': False, 'detail': 'Datos recibidos, pero no se pudo enviar el correo: ' + str(e)[:200]})
+                    return self.respond({'ok': True, 'saved': True, 'email_sent': True})
+
+                if p == '/api/profile':
+                    if self.command == 'GET':
+                        pr = c.execute('SELECT nombres,apellidos,run,razon_social,rut,email,telefono,direccion FROM user_profiles WHERE user_id=?', (row_get(u,'id'),)).fetchone()
+                        if not pr:
+                            return self.respond({'profile': None})
+                        return self.respond({'profile': {'nombres':row_get(pr,'nombres') or '','apellidos':row_get(pr,'apellidos') or '','run':row_get(pr,'run') or '','razon_social':row_get(pr,'razon_social') or '','rut':row_get(pr,'rut') or '','email':row_get(pr,'email') or '','telefono':row_get(pr,'telefono') or '','direccion':row_get(pr,'direccion') or ''}})
+                    # POST save profile
+                    nombres = (x.get('nombres') or '').strip()[:120]
+                    apellidos = (x.get('apellidos') or '').strip()[:120]
+                    run = (x.get('run') or '').strip().upper()[:12]
+                    razon = (x.get('razon_social') or '').strip()[:200]
+                    rut = (x.get('rut') or '').strip().upper()[:12]
+                    email = (x.get('email') or '').strip().lower()[:254]
+                    telefono = (x.get('telefono') or '').strip().replace(' ','')[:20]
+                    direccion = (x.get('direccion') or '').strip()[:300]
+                    c.execute("""INSERT INTO user_profiles(user_id,nombres,apellidos,run,razon_social,rut,email,telefono,direccion,updated_at)
+                                 VALUES(?,?,?,?,?,?,?,?,?,?)
+                                 ON CONFLICT(user_id) DO UPDATE SET nombres=excluded.nombres,apellidos=excluded.apellidos,run=excluded.run,razon_social=excluded.razon_social,rut=excluded.rut,email=excluded.email,telefono=excluded.telefono,direccion=excluded.direccion,updated_at=excluded.updated_at""",
+                              (row_get(u,'id'), nombres, apellidos, run, razon, rut, email, telefono, direccion, time.time()))
                     return self.respond({'ok': True})
 
                 licensed = row_get(u, 'role') == 'admin' or c.execute('SELECT 1 FROM licenses WHERE user_id=? AND device=? AND revoked=0', (row_get(u, 'id'), DEVICE)).fetchone()
