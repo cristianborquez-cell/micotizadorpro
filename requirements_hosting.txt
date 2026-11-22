@@ -1,4 +1,3 @@
-# Cotizador Pro Híbrido — dependencias para hosting
-# El servidor local usa solo biblioteca estándar de Python
-# Para WSGI en hosting:
-wsgiref==0.1.2
+# Dependencias para hosting (Render)
+# psycopg[binary]: requerido solo si se usa PostgreSQL (DATABASE_URL)
+psycopg[binary]>=3.2,<4
