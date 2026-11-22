@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.micotizadorpro.app",
+    "sha256_cert_fingerprints": [
+      "18:7F:2B:79:72:AA:87:A0:5B:0B:AD:54:F0:E6:69:F9:8A:FB:3B:F8:BD:D9:C2:B2:C7:21:D8:3E:75:55:31:7A"
+    ]
+  }
+}]
