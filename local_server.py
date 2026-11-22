@@ -186,7 +186,8 @@ class Handler(BaseHTTPRequestHandler):
                 '/': 'login.html', '/app': 'cotizador.html', '/admin': 'admin.html', '/license': 'license.html',
                 '/assets/server_bridge.js': 'server_bridge.js', '/assets/jspdf.umd.min.js': 'jspdf.umd.min.js',
                 '/assets/html2canvas.min.js': 'html2canvas.min.js', '/manifest.json': 'manifest.json', '/sw.js': 'sw.js',
-                '/download/apk': 'CotizadorPro-Android-debug.apk', '/CotizadorPro-Android-debug.apk': 'CotizadorPro-Android-debug.apk'
+                '/download/apk': 'CotizadorPro-Android-debug.apk', '/CotizadorPro-Android-debug.apk': 'CotizadorPro-Android-debug.apk',
+                '/.well-known/assetlinks.json': 'assetlinks.json'
             }
             name = files.get(self.path.split('?', 1)[0])
         if not name or not (ROOT / 'frontend' / name).exists():
