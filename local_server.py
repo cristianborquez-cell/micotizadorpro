@@ -100,7 +100,7 @@ if IS_PG:
             for name, kind in [('license_id','TEXT'),('created_at','DOUBLE PRECISION DEFAULT 0'),('expires_at','DOUBLE PRECISION DEFAULT 0'),('used_at','DOUBLE PRECISION'),('is_invite','INTEGER DEFAULT 0')]:
                 if name not in cols:
                     c.execute('ALTER TABLE licenses ADD COLUMN ' + name + ' ' + kind)
-            c.execute("UPDATE licenses SET license_id=encode(gen_random_bytes(12),'hex') WHERE license_id IS NULL")
+            c.execute("UPDATE licenses SET license_id=replace(gen_random_uuid()::text,'-','') WHERE license_id IS NULL")
             c.execute('UPDATE licenses SET is_invite=1 WHERE user_id IS NULL AND device IS NULL')
 else:
     DB = DATA / 'local.db'
