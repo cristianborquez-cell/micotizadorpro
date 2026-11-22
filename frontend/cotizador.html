@@ -428,7 +428,8 @@
                     <button class="btn-primary" onclick="guardarCotizacion()">💾 Guardar</button>
                     <button class="btn-info" onclick="duplicarCotizacion()">📋 Duplicar</button>
                     <button class="btn-warning" onclick="nuevaCotizacion()">🗑️ Nueva</button>
-                    <button class="btn-secondary" onclick="compartirWhatsApp()">📱 WhatsApp</button>
+                    <button class="btn-secondary" onclick="compartirWhatsApp()">📲 WhatsApp PDF</button>
+                    <button class="btn-info" onclick="enviarPorCorreo()">✉️ Enviar por correo</button>
                     <button class="btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
                     <button class="btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
                 </div>
@@ -1496,41 +1497,33 @@
         // COMPARTIR POR WHATSAPP
         // =============================================================
         
-        function compartirWhatsApp() {
+        async function compartirWhatsApp() {
             if (productos.length === 0) { alert('Agrega items primero para compartir.'); return; }
-            
-            const cliente = document.getElementById('nombreCliente').value || 'Estimado/a';
-            const numero = document.getElementById('numCotizacion').value;
-            const total = document.getElementById('total').value;
-            const vigencia = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
-            
-            let mensaje = `*COTIZACIÓN ${numero}*%0A%0A`;
-            mensaje += `Hola ${escapeHTML(cliente)},%0A%0A`;
-            mensaje += `Te comparto el resumen de tu cotización:%0A%0A`;
-            
-            productos.slice(0, 10).forEach(p => {
-                mensaje += `• ${p.descripcion.substring(0, 40)}${p.descripcion.length > 40 ? '...' : ''}%0A`;
-                mensaje += `  ${p.cantidad} x $${formato(p.precioVenta)} = $${formato(p.subtotal)}%0A`;
-            });
-            
-            if (productos.length > 10) {
-                mensaje += `%0A... y ${productos.length - 10} items más%0A`;
+            const btn = event?.target;
+            const oldTxt = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparando PDF...'; }
+            try {
+                const { blob, filename, mensaje } = await generarPDFBlob();
+                const file = new File([blob], filename, { type: 'application/pdf' });
+                // Web Share API: permite elegir contacto/app (WhatsApp, correo, etc.) y adjunta PDF
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: filename.replace('.pdf',''), text: mensaje });
+                } else {
+                    // Fallback: descarga PDF y abre WhatsApp para elegir destinatario
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+                    const url = 'https://wa.me/?text=' + encodeURIComponent(mensaje + '\n\nAdjunté el PDF de la cotización.');
+                    window.open(url, '_blank');
+                    alert('Se descargó el PDF. En WhatsApp selecciona el contacto y adjunta el PDF descargado.');
+                }
+            } catch(err) {
+                if (err?.name !== 'AbortError') { console.error(err); alert('No se pudo compartir: ' + (err.message||err)); }
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = oldTxt; }
             }
-            
-            mensaje += `%0A*TOTAL: ${total}*%0A`;
-            mensaje += `Válida hasta: ${vigencia}%0A%0A`;
-            mensaje += `Cualquier consulta, con gusto te atiendo.%0A`;
-            mensaje += `— Cristian Borquez`;
-            
-            const fono = document.getElementById('fonoCliente').value.replace(/[^0-9]/g, '');
-            let url;
-            if (fono && fono.length >= 8) {
-                url = `https://wa.me/${fono}?text=${mensaje}`;
-            } else {
-                url = `https://wa.me/?text=${mensaje}`;
-            }
-            
-            window.open(url, '_blank');
         }
         
         // =============================================================
@@ -1670,8 +1663,8 @@
             }
         }
         
-        async function generarPDF() {
-            if (productos.length === 0) return alert('Agrega items primero para generar el PDF');
+        async function construirPDFDoc() {
+            if (productos.length === 0) throw new Error('Agrega items primero');
             aplicarEstiloPDF();
             document.getElementById('pdfVigencia').textContent = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
             document.getElementById('pdfNum').textContent = document.getElementById('numCotizacion').value;
@@ -1679,7 +1672,6 @@
             document.getElementById('pdfCliente').textContent = document.getElementById('nombreCliente').value || 'N/A';
             document.getElementById('pdfFono').textContent = document.getElementById('fonoCliente').value || 'N/A';
             document.getElementById('pdfObs').textContent = document.getElementById('observaciones').value || 'N/A';
-            
             const tbody = document.getElementById('pdfTablaBody');
             tbody.innerHTML = '';
             productos.forEach(p => {
@@ -1689,52 +1681,104 @@
                     <td>${escapeHTML(p.descripcion)}${descuentoTxt}</td>
                     <td style="text-align:center;">${p.cantidad}</td>
                     <td style="text-align:center;">${p.descuento > 0 ? p.descuento + '%' : '—'}</td>
-                    <td style="text-align:right;">$${formato(p.precioVenta)}</td>
-                    <td style="text-align:right;">$${formato(p.subtotal)}</td>
+                    <td style="text-align:right;">${formato(p.precioVenta)}</td>
+                    <td style="text-align:right;">${formato(p.subtotal)}</td>
                 `;
                 tbody.appendChild(tr);
             });
-            
             document.getElementById('pdfSubtotal').textContent = document.getElementById('subtotal').value;
             document.getElementById('pdfIvaPct').textContent = document.getElementById('ivaPorcentaje').value;
             document.getElementById('pdfIva').textContent = document.getElementById('iva').value;
             document.getElementById('pdfFletePct').textContent = document.getElementById('fletePorcentaje').value;
             document.getElementById('pdfFlete').textContent = document.getElementById('fleteMonto').value;
             document.getElementById('pdfTotal').textContent = document.getElementById('total').value;
-            
             const element = document.getElementById('pdfRenderBox');
-            
-            try {
-                const canvas = await html2canvas(element, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pageWidth = 210;
-                const pageHeight = 297;
-                const imgHeight = (canvas.height * pageWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
+            const canvas = await html2canvas(element, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * pageWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+            heightLeft -= pageHeight;
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
                 heightLeft -= pageHeight;
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-                
-                agregarSeguridadPDF(pdf);
-                pdf.setProperties({
-                    title: `Cotización ${document.getElementById('numCotizacion').value}`,
-                    subject: 'Cotización Pro Híbrido - Documento protegido',
-                    author: 'Cristian Borquez',
-                    creator: 'Cotizador Pro Híbrido V3.2 Local',
-                    keywords: 'Cristian Borquez, Cotización, Solar, Pro Híbrido, Documento protegido'
-                });
-                pdf.save(`${document.getElementById('numCotizacion').value}.pdf`);
+            }
+            agregarSeguridadPDF(pdf);
+            pdf.setProperties({
+                title: `Cotización ${document.getElementById('numCotizacion').value}`,
+                subject: 'Cotización Pro Híbrido - Documento protegido',
+                author: 'Cristian Borquez',
+                creator: 'Cotizador Pro Híbrido V3.2 Local',
+                keywords: 'Cristian Borquez, Cotización, Solar, Pro Híbrido, Documento protegido'
+            });
+            const filename = `${document.getElementById('numCotizacion').value}.pdf`;
+            return { pdf, filename };
+        }
+
+        async function generarPDFBlob() {
+            const { pdf, filename } = await construirPDFDoc();
+            const blob = pdf.output('blob');
+            const cliente = document.getElementById('nombreCliente').value || 'Estimado/a';
+            const numero = document.getElementById('numCotizacion').value;
+            const total = document.getElementById('total').value;
+            const vigencia = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
+            let mensaje = `Cotización ${numero}\nCliente: ${cliente}\nTotal: ${total}\nVálida hasta: ${vigencia}`;
+            return { blob, filename, mensaje };
+        }
+
+        async function generarPDF() {
+            try {
+                const { pdf, filename } = await construirPDFDoc();
+                pdf.save(filename);
             } catch (err) {
                 console.error(err);
                 alert('Error al generar PDF.');
+            }
+        }
+
+        async function enviarPorCorreo() {
+            if (productos.length === 0) { alert('Agrega items primero.'); return; }
+            const cliente = document.getElementById('nombreCliente').value || '';
+            const toDefault = (document.getElementById('emailCliente')?.value || '').trim();
+            const to = prompt('Correo destinatario:', toDefault);
+            if (!to) return;
+            const btn = event?.target;
+            const oldTxt = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+            try {
+                const { blob, filename, mensaje } = await generarPDFBlob();
+                const b64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+                const res = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(window.AuthToken ? { 'Authorization': 'Bearer ' + window.AuthToken } : {}) },
+                    body: JSON.stringify({
+                        to: to.trim(),
+                        subject: 'Cotización ' + document.getElementById('numCotizacion').value,
+                        body: mensaje + '\n\nAdjunto PDF de cotización.\n\nCotizador Pro Híbrido',
+                        filename,
+                        pdf_base64: b64
+                    })
+                });
+                const data = await res.json().catch(()=>({}));
+                if (!res.ok) throw new Error(data.detail || 'Error enviando correo');
+                alert('Correo enviado a ' + to.trim());
+            } catch(err) {
+                console.error(err);
+                alert('No se pudo enviar el correo: ' + (err.message||err));
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = oldTxt; }
             }
         }
         
