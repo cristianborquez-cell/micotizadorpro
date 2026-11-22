@@ -302,8 +302,12 @@ class Handler(BaseHTTPRequestHandler):
 
                 if p == '/api/auth/reset':
                     u = find_user_by_login(x.get('username', '') or x.get('email', ''))
-                    if not u or not row_get(u, 'reset') or row_get(u, 'reset_exp') < time.time() or not hmac.compare_digest(row_get(u, 'reset'), digest(x.get('code', ''))):
-                        fail('Código inválido o vencido')
+                    if not u:
+                        fail('Usuario no encontrado')
+                    if not row_get(u, 'reset') or row_get(u, 'reset_exp') < time.time():
+                        fail('Código de recuperación inválido o vencido. Solicite uno nuevo al administrador')
+                    if not hmac.compare_digest(row_get(u, 'reset'), digest(x.get('code', ''))):
+                        fail('Código de recuperación incorrecto')
                     strong(x.get('password', ''))
                     c.execute('UPDATE users SET password=?,reset=NULL,reset_exp=NULL WHERE id=?', (password(x['password']), row_get(u, 'id')))
                     for k in list(SESSIONS):
@@ -319,8 +323,12 @@ class Handler(BaseHTTPRequestHandler):
                         fail('Demasiados intentos. Espere 10 minutos')
                     ATTEMPTS[key] = a + [time.time()]
                     u = find_user_by_login(key)
-                    if not u or not verify(x.get('password', ''), row_get(u, 'password')) or row_get(u, 'status') != 'activo':
-                        fail('Credenciales incorrectas o cuenta restringida')
+                    if not u:
+                        fail('Usuario no existe')
+                    if row_get(u, 'status') != 'activo':
+                        fail('Cuenta desactivada. Contacte al administrador')
+                    if not verify(x.get('password', ''), row_get(u, 'password')):
+                        fail('Contraseña incorrecta')
                     ATTEMPTS.pop(key, None)
                     token = secrets.token_urlsafe(40)
                     SESSIONS[token] = (row_get(u, 'id'), time.time() + 43200)
