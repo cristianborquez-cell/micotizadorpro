@@ -1,6 +1,7 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-import os, sqlite3, json, secrets, hashlib, hmac, time, uuid, platform, threading
+import os, sqlite3, json, secrets, hashlib, hmac, time, uuid, platform, threading, smtplib, ssl, base64
+from email.message import EmailMessage
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get('COTIZADOR_DATA', str(ROOT / 'data')))
@@ -434,6 +435,54 @@ class Handler(BaseHTTPRequestHandler):
                 licensed = row_get(u, 'role') == 'admin' or c.execute('SELECT 1 FROM licenses WHERE user_id=? AND device=? AND revoked=0', (row_get(u, 'id'), DEVICE)).fetchone()
                 if not licensed:
                     return self.respond({'detail': 'Active el PIN de licencia para este equipo'}, 403)
+                if p == '/api/send-email':
+                    to_addr = (x.get('to') or '').strip()
+                    subject = (x.get('subject') or 'Cotización').strip()[:200]
+                    body = (x.get('body') or '').strip()[:5000]
+                    filename = (x.get('filename') or 'cotizacion.pdf').strip().replace('/', '_').replace('\\', '_')[:120]
+                    pdf_b64 = x.get('pdf_base64') or ''
+                    if not to_addr or '@' not in to_addr:
+                        fail('Correo destinatario inválido')
+                    if len(pdf_b64) > 8_000_000:
+                        fail('El PDF es demasiado grande')
+                    try:
+                        pdf_bytes = base64.b64decode(pdf_b64)
+                    except Exception:
+                        fail('PDF inválido')
+                    smtp_host = os.environ.get('SMTP_HOST', '').strip()
+                    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+                    smtp_user = os.environ.get('SMTP_USER', '').strip()
+                    smtp_pass = os.environ.get('SMTP_PASS', '').strip()
+                    smtp_from = os.environ.get('SMTP_FROM', smtp_user).strip()
+                    smtp_tls = os.environ.get('SMTP_TLS', '1').strip() != '0'
+                    if not smtp_host or not smtp_from:
+                        return self.respond({'detail': 'Correo no configurado en el servidor. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM en variables de entorno.'}, 400)
+                    msg = EmailMessage()
+                    msg['Subject'] = subject
+                    msg['From'] = smtp_from
+                    msg['To'] = to_addr
+                    msg.set_content(body or 'Adjunto cotización.')
+                    msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=filename)
+                    try:
+                        if smtp_port == 465:
+                            ctx = ssl.create_default_context()
+                            with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx, timeout=20) as s:
+                                if smtp_user:
+                                    s.login(smtp_user, smtp_pass)
+                                s.send_message(msg)
+                        else:
+                            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as s:
+                                s.ehlo()
+                                if smtp_tls:
+                                    s.starttls(context=ssl.create_default_context())
+                                    s.ehlo()
+                                if smtp_user:
+                                    s.login(smtp_user, smtp_pass)
+                                s.send_message(msg)
+                    except Exception as e:
+                        return self.respond({'detail': 'No se pudo enviar el correo: ' + str(e)[:200]}, 500)
+                    return self.respond({'ok': True})
+
                 if p == '/api/local/history':
                     if self.command == 'POST':
                         for q in x['quotes']:
