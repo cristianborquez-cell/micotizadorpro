@@ -601,12 +601,28 @@ ID usuario: {row_get(u,'id')}
                     smtp_pass = os.environ.get('SMTP_PASS', '').strip()
                     smtp_from = os.environ.get('SMTP_FROM', smtp_user).strip()
                     smtp_tls = os.environ.get('SMTP_TLS', '1').strip() != '0'
+                    # From: correo registrado del emisor (perfil) si existe; Reply-To igual
+                    emisor_email = ''
+                    emisor_name = ''
+                    try:
+                        pr = c.execute('SELECT nombres,apellidos,email,razon_social FROM user_profiles WHERE user_id=?', (row_get(u,'id'),)).fetchone()
+                        if pr:
+                            emisor_email = (row_get(pr,'email') or '').strip()
+                            emisor_name = ((row_get(pr,'nombres') or '') + ' ' + (row_get(pr,'apellidos') or '')).strip() or (row_get(pr,'razon_social') or '').strip()
+                    except Exception:
+                        pass
+                    from_addr = emisor_email if emisor_email else smtp_from
                     if not smtp_host or not smtp_from:
                         return self.respond({'detail': 'Correo no configurado en el servidor. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM en variables de entorno.'}, 400)
                     msg = EmailMessage()
                     msg['Subject'] = subject
-                    msg['From'] = smtp_from
+                    if emisor_name and from_addr:
+                        msg['From'] = f"{emisor_name} <{from_addr}>"
+                    else:
+                        msg['From'] = from_addr or smtp_from
                     msg['To'] = to_addr
+                    if emisor_email:
+                        msg['Reply-To'] = emisor_email
                     msg.set_content(body or 'Adjunto cotización.')
                     msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=filename)
                     try:
