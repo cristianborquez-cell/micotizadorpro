@@ -1504,6 +1504,17 @@
             if (btn) { btn.disabled = true; btn.textContent = '⏳ Preparando PDF...'; }
             try {
                 const { blob, filename, mensaje } = await generarPDFBlob();
+                // Puente nativo Android WebView: abre selector del sistema/WhatsApp con PDF adjunto
+                if (window.AndroidShare && typeof window.AndroidShare.sharePdf === 'function') {
+                    const b64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                    window.AndroidShare.sharePdf(b64, filename, mensaje);
+                    return;
+                }
                 const file = new File([blob], filename, { type: 'application/pdf' });
                 // Web Share API: permite elegir contacto/app (WhatsApp, correo, etc.) y adjunta PDF
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
