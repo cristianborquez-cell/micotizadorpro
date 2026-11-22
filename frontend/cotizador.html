@@ -1758,8 +1758,8 @@
             document.getElementById('pdfFlete').textContent = document.getElementById('fleteMonto').value;
             document.getElementById('pdfTotal').textContent = document.getElementById('total').value;
             const element = document.getElementById('pdfRenderBox');
-            const canvas = await html2canvas(element, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
+            const canvas = await html2canvas(element, { scale: 1.5 });
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = 210;
@@ -1767,12 +1767,12 @@
             const imgHeight = (canvas.height * pageWidth) / canvas.width;
             let heightLeft = imgHeight;
             let position = 0;
-            pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
             heightLeft -= pageHeight;
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
                 heightLeft -= pageHeight;
             }
             agregarSeguridadPDF(pdf);
@@ -1810,9 +1810,8 @@
 
         async function enviarPorCorreo() {
             if (productos.length === 0) { alert('Agrega items primero.'); return; }
-            const cliente = document.getElementById('nombreCliente').value || '';
-            const toDefault = (document.getElementById('emailCliente')?.value || '').trim();
-            const to = prompt('Correo destinatario:', toDefault);
+            const toDefault = ((perfilEmisor && perfilEmisor.email) ? perfilEmisor.email : (document.getElementById('emailCliente')?.value || '')).trim();
+            const to = prompt('Correo destinatario (emisor):', toDefault);
             if (!to) return;
             const btn = event?.target;
             const oldTxt = btn ? btn.textContent : '';
