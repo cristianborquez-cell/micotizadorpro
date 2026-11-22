@@ -452,7 +452,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond({'ok': True})
 
                 if p == '/api/license/status':
-                    active = row_get(u, 'role') == 'admin' or bool(c.execute('SELECT 1 FROM licenses WHERE user_id=? AND device=? AND revoked=0', (row_get(u, 'id'), DEVICE)).fetchone())
+                    active = row_get(u, 'role') == 'admin' or bool(c.execute('SELECT 1 FROM licenses WHERE user_id=? AND revoked=0' + ('' if IS_PG else ' AND device=?'), (row_get(u, 'id'),) if IS_PG else (row_get(u, 'id'), DEVICE)).fetchone())
                     return self.respond({'active': active, 'username': row_get(u, 'username')})
                 if p == '/api/license/activate':
                     r = c.execute('SELECT * FROM licenses WHERE pin=? AND user_id=? AND revoked=0', (digest(x.get('pin', '')), row_get(u, 'id'))).fetchone()
@@ -578,7 +578,7 @@ ID usuario: {row_get(u,'id')}
                               (row_get(u,'id'), nombres, apellidos, run, razon, rut, email, telefono, direccion, time.time()))
                     return self.respond({'ok': True})
 
-                licensed = row_get(u, 'role') == 'admin' or c.execute('SELECT 1 FROM licenses WHERE user_id=? AND device=? AND revoked=0', (row_get(u, 'id'), DEVICE)).fetchone()
+                licensed = row_get(u, 'role') == 'admin' or c.execute('SELECT 1 FROM licenses WHERE user_id=? AND revoked=0' + ('' if IS_PG else ' AND device=?'), (row_get(u, 'id'),) if IS_PG else (row_get(u, 'id'), DEVICE)).fetchone()
                 if not licensed:
                     return self.respond({'detail': 'Active el PIN de licencia para este equipo'}, 403)
                 if p == '/api/send-email':
