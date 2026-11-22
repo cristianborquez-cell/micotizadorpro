@@ -63,18 +63,27 @@ const token=sessionStorage.getItem('cotizador_token');if(!token)location='/';
 const el=id=>document.getElementById(id);
 function setMsg(t,ok){const m=el('msg');m.textContent=t||'';m.className=ok?'ok':'err';}
 
-function cleanRut(v){
+function cleanRut(v, keepGhost){
   v=(v||'').toString().trim().toUpperCase().replace(/\./g,'').replace(/\s+/g,'');
-  if(!v) return '';
-  if(v.indexOf('-')===-1 && v.length>=2) v=v.slice(0,-1)+'-'+v.slice(-1);
-  let parts=v.split('-'); let body=(parts[0]||'').replace(/[^0-9]/g,''); let dv=(parts[1]||'').replace(/[^0-9K]/g,'');
-  if(body.length===7) body='0'+body; // 0 fantasma invisible para cumplir 8 dígitos
-  return body+(dv?('-'+dv):'');
+  v=v.replace(/[^0-9K\-]/g,'');
+  const parts=v.split('-');
+  let body=(parts[0]||'').replace(/[^0-9]/g,'').slice(0,8);
+  let dv=(parts.length>1?(parts.slice(1).join('')):'').replace(/[^0-9K]/g,'').slice(0,1);
+  const hadGhost = body.length===7;
+  if(body.length===7) body='0'+body; // 0 fantasma interno
+  const full = body+(dv?('-'+dv):(parts.length>1?'-':''));
+  if(keepGhost===false && hadGhost && full.length>=2) return full.slice(1); // no mostrar 0 fantasma
+  return full;
 }
 function rutValido(v){
-  v=cleanRut(v);
-  if(!/^\d{8}-[0-9K]$/.test(v)) return false;
-  const body=v.split('-')[0], dv=v.split('-')[1];
+  const raw=(v||'').toString().trim().toUpperCase();
+  if(raw.indexOf('-')===-1) return false;
+  let [body,dv] = raw.split('-');
+  body=(body||'').replace(/[^0-9]/g,'');
+  dv=(dv||'').replace(/[^0-9K]/g,'');
+  if(!/^[0-9K]$/.test(dv)) return false;
+  if(body.length===7) body='0'+body; // 0 fantasma interno
+  if(body.length!==8) return false;
   let mult=2,sum=0;
   for(let i=body.length-1;i>=0;i--){ sum+=parseInt(body[i],10)*mult; mult=mult<7?mult+1:2; }
   const rest=11-(sum%11);
@@ -82,16 +91,17 @@ function rutValido(v){
   return dvCalc===dv;
 }
 function formatRutInput(inp){
-  const pos=inp.selectionStart; const raw=inp.value;
-  const cleaned=raw.toUpperCase().replace(/[^0-9Kk]/g,'');
-  let out=cleaned;
-  if(cleaned.length>1){ out=cleaned.slice(0,-1)+'-'+cleaned.slice(-1); }
-  // normalize body to 8 digits when 7 entered
-  if(out.indexOf('-')>-1){ const [b,d]=out.split('-'); if(b.length===7) out='0'+b+'-'+d; }
-  inp.value=out.slice(0,10);
+  let v=inp.value.toUpperCase().replace(/[^0-9K\-]/g,'');
+  // allow only one dash
+  const firstDash=v.indexOf('-');
+  if(firstDash!==-1) v=v.slice(0,firstDash+1)+v.slice(firstDash+1).replace(/-/g,'');
+  let [body,dv='']=v.split('-');
+  body=body.replace(/[^0-9]/g,'').slice(0,8);
+  dv=dv.replace(/[^0-9K]/g,'').slice(0,1);
+  inp.value = firstDash!==-1 ? (body+'-'+dv) : body;
 }
 
-['run','rut'].forEach(id=>{ const inp=el(id); inp.addEventListener('input',()=>formatRutInput(inp)); inp.addEventListener('blur',()=>{inp.value=cleanRut(inp.value);}); });
+['run','rut'].forEach(id=>{ const inp=el(id); inp.addEventListener('input',()=>formatRutInput(inp)); });
 
 async function api(p,x){
   const r=await fetch(p,{method:x?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:x?JSON.stringify(x):undefined,signal:(AbortSignal.timeout?AbortSignal.timeout(15000):undefined)});
@@ -115,9 +125,9 @@ el('dataForm').onsubmit=async e=>{
   const direccion=el('direccion').value.trim();
   el('run').value=run; el('rut').value=rut; el('telefono').value=telefono;
   if(!nombres||!apellidos) return setMsg('Ingrese nombres y apellidos',false);
-  if(!rutValido(run)) return setMsg('RUN inválido. Use formato XXXXXXXX-X o K con dígito verificador válido',false);
+  if(!rutValido(run)) return setMsg('Ingrese un RUN válido',false);
   if(!razon) return setMsg('Ingrese razón social o nombre de fantasía',false);
-  if(!rutValido(rut)) return setMsg('RUT inválido. Use formato XXXXXXXX-X o K con dígito verificador válido',false);
+  if(!rutValido(rut)) return setMsg('Ingrese un RUT válido',false);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setMsg('Ingrese un correo electrónico válido',false);
   if(!/^\+569\d{8}$/.test(telefono)) return setMsg('Teléfono inválido. Use formato +56912345678',false);
   if(!direccion) return setMsg('Ingrese dirección',false);
