@@ -520,6 +520,21 @@
                 Válida hasta: <span id="pdfVigencia"></span>
             </div>
         </div>
+        <div class="pdf-info-card" style="margin-bottom:8px;">
+            <div class="pdf-info-title">DATOS DEL EMISOR</div>
+            <div class="header-grid" style="margin-bottom:0;">
+                <div>
+                    <strong>Razón social / Nombre fantasía:</strong> <span id="pdfEmisorRazon"></span><br>
+                    <strong>Nombre:</strong> <span id="pdfEmisorNombre"></span><br>
+                    <strong>RUN:</strong> <span id="pdfEmisorRun"></span> &nbsp; <strong>RUT:</strong> <span id="pdfEmisorRut"></span>
+                </div>
+                <div style="text-align:right;max-width:52%;">
+                    <strong>Correo:</strong> <span id="pdfEmisorEmail"></span><br>
+                    <strong>Teléfono:</strong> <span id="pdfEmisorTelefono"></span><br>
+                    <strong>Dirección:</strong> <span id="pdfEmisorDireccion"></span>
+                </div>
+            </div>
+        </div>
         <div class="pdf-info-card">
             <div class="pdf-info-title">DATOS DEL CLIENTE</div>
             <div class="header-grid" style="margin-bottom:0;">
@@ -580,6 +595,26 @@
         // =============================================================
         
         let productos = [];
+        let perfilEmisor = null;
+        async function cargarPerfilEmisor(){
+            try{
+                const token=sessionStorage.getItem('cotizador_token');
+                const r=await fetch('/api/profile',{headers:{'Authorization':'Bearer '+token}});
+                const d=await r.json();
+                if(r.ok && d.profile) perfilEmisor=d.profile;
+            }catch(e){}
+        }
+        function aplicarPerfilEmisorPDF(){
+            const p=perfilEmisor||{};
+            const set=(id,v)=>{const n=document.getElementById(id); if(n) n.textContent=v||'N/A';};
+            set('pdfEmisorRazon',p.razon_social);
+            set('pdfEmisorNombre',((p.nombres||'')+' '+(p.apellidos||'')).trim());
+            set('pdfEmisorRun',p.run);
+            set('pdfEmisorRut',p.rut);
+            set('pdfEmisorEmail',p.email);
+            set('pdfEmisorTelefono',p.telefono);
+            set('pdfEmisorDireccion',p.direccion);
+        }
         let historial = [];
         let plantillas = [];
         let historialPrecios = [];
@@ -649,6 +684,7 @@
             cargarBorradorAutoguardado();
             generarNuevoCorrelativo();
             actualizarTabla();
+            cargarPerfilEmisor();
             cargarModoOscuro();
             cambiarTipo();
             renderizarPlantillas();
@@ -1677,6 +1713,7 @@
         async function construirPDFDoc() {
             if (productos.length === 0) throw new Error('Agrega items primero');
             aplicarEstiloPDF();
+            aplicarPerfilEmisorPDF();
             document.getElementById('pdfVigencia').textContent = calcularFechaVigencia(document.getElementById('fechaCotizacion').value);
             document.getElementById('pdfNum').textContent = document.getElementById('numCotizacion').value;
             document.getElementById('pdfFecha').textContent = document.getElementById('fechaCotizacion').value;
