@@ -347,12 +347,8 @@
                     
                     <div class="form-row" style="flex-wrap:wrap;">
                         <div class="form-group" style="min-width:120px"><label>Mercado Libre</label><input type="text" id="precio_mercadolibre" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Falabella</label><input type="text" id="precio_falabella" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Paris</label><input type="text" id="precio_paris" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Ripley</label><input type="text" id="precio_ripley" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
                         <div class="form-group" style="min-width:120px"><label>Sodimac</label><input type="text" id="precio_sodimac" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
                         <div class="form-group" style="min-width:120px"><label>Easy</label><input type="text" id="precio_easy" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Líder (Walmart)</label><input type="text" id="precio_lider" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
                     </div>
                     <div id="errorPrecioProducto" class="error-precio">⚠️ No se pudo extraer el precio automático desde ninguna tienda. Ajusta el término de búsqueda.</div>
                     <div class="form-row">
@@ -806,11 +802,7 @@
         const TIENDAS_CHILE = [
             { nombre: 'Mercado Libre', key: 'mercadolibre', api: true, prioridad: 1 },
             { nombre: 'Sodimac', key: 'sodimac', dominio: 'sodimac.cl', prioridad: 1 },
-            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl', prioridad: 1 },
-            { nombre: 'Lider (Walmart)', key: 'lider', dominio: 'lider.cl', prioridad: 2 },
-            { nombre: 'Falabella', key: 'falabella', dominio: 'falabella.com', prioridad: 2 },
-            { nombre: 'Paris', key: 'paris', dominio: 'paris.cl', prioridad: 3 },
-            { nombre: 'Ripley', key: 'ripley', dominio: 'ripley.com.cl', prioridad: 3 }
+            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl', prioridad: 1 }
         ];
 
         const _priceCache = new Map();
@@ -888,7 +880,7 @@
             actualizarProgreso();
 
             const tareas = TIENDAS_CHILE.map(async (tienda) => {
-                const timeoutMs = tienda.prioridad === 1 ? 8000 : 6500;
+                const timeoutMs = 5000;
                 try {
                     let val = 0;
                     if (tienda.api) {
@@ -956,7 +948,7 @@
             recalcularVentaPorMargen();
         }
 
-        async function buscarMercadoLibre(query, apiKey, timeoutMs=8000) {
+        async function buscarMercadoLibre(query, apiKey, timeoutMs=5000) {
             try {
                 let targetUrl = `https://api.mercadolibre.com/sites/MLC/search?q=${encodeURIComponent(query)}&limit=10`;
                 if (apiKey) {
@@ -975,7 +967,7 @@
             return 0;
         }
 
-        async function buscarTiendaConProxy(query, dominio, apiKey, timeoutMs=6500) {
+        async function buscarTiendaConProxy(query, dominio, apiKey, timeoutMs=5000) {
             try {
                 const targetSearchUrl = `https://www.google.com/search?q=site:${dominio}+${encodeURIComponent(query)}+precio+Chile`;
                 const proxyUrl = apiKey
@@ -1192,12 +1184,8 @@
         function limpiarCampos() {
             document.getElementById('descripcion').value = '';
             document.getElementById('precio_mercadolibre').value = '';
-            document.getElementById('precio_falabella').value = '';
-            document.getElementById('precio_paris').value = '';
-            document.getElementById('precio_ripley').value = '';
             document.getElementById('precio_sodimac').value = '';
             document.getElementById('precio_easy').value = '';
-            document.getElementById('precio_lider').value = '';
             document.getElementById('precioServicio').value = '';
             document.getElementById('mejorPrecio').value = '$0';
             document.getElementById('tiendaMejor').textContent = '';
