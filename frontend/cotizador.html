@@ -798,25 +798,45 @@
                 input.style.borderColor = '';
             }
         }
-        
+
         // =============================================================
-        // BÚSQUEDA AUTOMÁTICA DE PRECIOS
+        // BÚSQUEDA AUTOMÁTICA DE PRECIOS – CHILE (optimizada)
         // =============================================================
-        
-        // =============================================================
-        // BÚSQUEDA AUTOMÁTICA DE PRECIOS — CHILE NACIONAL
-        // =============================================================
-        
+
         const TIENDAS_CHILE = [
-            { nombre: 'Mercado Libre', key: 'mercadolibre', api: true },
-            { nombre: 'Falabella', key: 'falabella', dominio: 'falabella.com' },
-            { nombre: 'Paris', key: 'paris', dominio: 'paris.cl' },
-            { nombre: 'Ripley', key: 'ripley', dominio: 'ripley.com.cl' },
-            { nombre: 'Sodimac', key: 'sodimac', dominio: 'sodimac.cl' },
-            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl' },
-            { nombre: 'Lider (Walmart)', key: 'lider', dominio: 'lider.cl' }
+            { nombre: 'Mercado Libre', key: 'mercadolibre', api: true, prioridad: 1 },
+            { nombre: 'Sodimac', key: 'sodimac', dominio: 'sodimac.cl', prioridad: 1 },
+            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl', prioridad: 1 },
+            { nombre: 'Lider (Walmart)', key: 'lider', dominio: 'lider.cl', prioridad: 2 },
+            { nombre: 'Falabella', key: 'falabella', dominio: 'falabella.com', prioridad: 2 },
+            { nombre: 'Paris', key: 'paris', dominio: 'paris.cl', prioridad: 3 },
+            { nombre: 'Ripley', key: 'ripley', dominio: 'ripley.com.cl', prioridad: 3 }
         ];
-        
+
+        const _priceCache = new Map();
+        function _cacheKey(q){ return q.toLowerCase().replace(/\s+/g,' ').trim(); }
+        function _getCached(q){ const k=_cacheKey(q); const e=_priceCache.get(k); if(e && Date.now()-e.ts < 30*60*1000) return e.data; return null; }
+        function _setCached(q,data){ _priceCache.set(_cacheKey(q), {ts:Date.now(), data}); }
+
+        async function fetchWithTimeout(url, opts={}, ms=7000){
+            const ctrl = new AbortController();
+            const t = setTimeout(()=>ctrl.abort(), ms);
+            try {
+                const res = await fetch(url, {...opts, signal: ctrl.signal});
+                return res;
+            } finally { clearTimeout(t); }
+        }
+
+        function enriquecerQuery(desc){
+            const q = desc.toLowerCase();
+            const tags = [];
+            if(/panel|solar|fotovolta|inversor|mppt|bateria|litio|lifepo4|controlador|regulador|estructura|riel|mc4|conector solar|string box|combiner/.test(q)) tags.push('fotovoltaico solar');
+            if(/cable|conductor|thhn|rv-k|enchufe|interruptor|automatico|breaker|tablero|canaleta|ducto|tuberia electrica|led|luminaria/.test(q)) tags.push('electrico');
+            if(/taladro|esmeril|sierra|martillo|llave|destornillador|herramienta|nivel|alicate|prensa/.test(q)) tags.push('herramienta');
+            if(/cemento|hormigon|madera|fierro|pintura|tornillo|perno|yeso|vulcanita|pvc|tubo|ceramica|porcelanato/.test(q)) tags.push('construccion');
+            return tags.length ? (desc + ' ' + tags[0]) : desc;
+        }
+
         async function ejecutarBusquedaAutomatica() {
             const desc = document.getElementById('descripcion').value.trim();
             if (!desc) { alert('Ingresa una descripción.'); return; }
@@ -826,116 +846,123 @@
             btn.textContent = '⏳ Buscando precios en tiendas de Chile...';
             btn.disabled = true;
             document.getElementById('errorPrecioProducto').classList.remove('visible');
-            estado.textContent = 'Buscando en ' + TIENDAS_CHILE.length + ' tiendas…';
-            contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando precios…</p>';
+            contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
             const apiKey = (document.getElementById('scraperApiKey').value || '').trim();
-            
-            // Reset campos individuales
+            const queryBusqueda = enriquecerQuery(desc);
+
             TIENDAS_CHILE.forEach(t => {
                 const el = document.getElementById('precio_' + t.key);
-                if (el) el.value = 'Buscando…';
+                if (el) el.value = 'Buscando...';
             });
-            
-            try {
-                const resultados = await Promise.allSettled(TIENDAS_CHILE.map(async (tienda) => {
-                    if (tienda.api) {
-                        const val = await buscarMercadoLibre(desc, apiKey);
-                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'API directa' };
-                    } else {
-                        const val = await buscarTiendaConProxy(desc, tienda.dominio, apiKey);
-                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
-                    }
-                }));
-                
-                const encontrados = [];
-                resultados.forEach((r, i) => {
-                    if (r.status === 'fulfilled' && r.value.valor > 0) {
-                        encontrados.push(r.value);
-                    }
-                    const elInput = document.getElementById('precio_' + TIENDAS_CHILE[i].key);
-                    if (elInput) {
-                        if (r.status === 'fulfilled' && r.value.valor > 0) {
-                            elInput.value = '$' + formato(r.value.valor);
-                        } else {
-                            elInput.value = 'No disponible';
-                        }
-                    }
-                });
-                
-                // Renderizar resultados detallados
-                if (encontrados.length > 0) {
-                    const html = encontrados.map(r => `
+
+            const cached = _getCached(desc);
+            if (cached && cached.length) {
+                renderResultadosBusqueda(cached, desc, false, true);
+                btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
+                btn.disabled = false;
+                return;
+            }
+
+            const encontrados = [];
+            let completados = 0;
+
+            function actualizarProgreso(){
+                estado.textContent = 'Buscando en tiendas... (' + completados + '/' + TIENDAS_CHILE.length + ')';
+            }
+
+            function renderParcial(){
+                const validos = encontrados.filter(x=>x.valor>0).sort((a,b)=>a.valor-b.valor);
+                if(validos.length){
+                    contenedor.innerHTML = validos.map(r => `
                         <div class="resultado-precio">
                             <strong>${r.tienda}</strong> — $${formato(r.valor)} <small>(${r.fuente})</small>
-                        </div>
-                    `).join('');
-                    contenedor.innerHTML = html;
-                    
-                    let esEstimacion = false;
-                    if (encontrados.length === 0) {
-                        const estimado = estimarPrecioPorAlgoritmo(desc);
-                        if (estimado > 0) {
-                            esEstimacion = true;
-                            encontrados.push({ tienda: 'Estimación interna', key: 'estimado', valor: estimado, fuente: 'Algoritmo' });
-                            contenedor.innerHTML = '<div class="resultado-precio estimado"><strong>Estimación interna</strong> — $' + formato(estimado) + ' <small>(referencial)</small></div>';
-                        }
-                    }
-                    
-                    const validos = encontrados.filter(x => x.valor > 0);
-                    if (validos.length > 0) {
-                        validos.sort((a, b) => a.valor - b.valor);
-                        const mejor = validos[0];
-                        mejorCostoEncontrado = mejor.valor;
-                        document.getElementById('mejorPrecio').value = '$' + formato(mejor.valor);
-                        
-                        guardarHistorialPrecio(desc, mejor.valor, mejor.tienda, esEstimacion);
-                        
-                        document.getElementById('tiendaMejor').textContent = esEstimacion
-                            ? `⚠️ Mejor costo estimado: $${formato(mejor.valor)}`
-                            : `🏆 Mejor precio en ${mejor.tienda}: $${formato(mejor.valor)}`;
-                        estado.textContent = esEstimacion
-                            ? 'Precio estimado internamente. Verifica disponibilidad antes de cotizar.'
-                            : 'Mejor precio encontrado en ' + mejor.tienda + '. Puede variar según disponibilidad.';
-                        recalcularVentaPorMargen();
-                    } else {
-                        throw new Error('No se encontraron precios');
-                    }
-                } else {
-                    const estimado = estimarPrecioPorAlgoritmo(desc);
-                    if (estimado > 0) {
-                        contenedor.innerHTML = '<div class="resultado-precio estimado"><strong>Estimación interna</strong> — $' + formato(estimado) + ' <small>(referencial, sin tiendas en línea)</small></div>';
-                        document.getElementById('mejorPrecio').value = '$' + formato(estimado);
-                        document.getElementById('tiendaMejor').textContent = `⚠️ Costo referencial estimado: $${formato(estimado)}`;
-                        estado.textContent = 'No se encontraron precios en tiendas. Usando estimación interna.';
-                        mejorCostoEncontrado = estimado;
-                        recalcularVentaPorMargen();
-                    } else {
-                        mejorCostoEncontrado = 0;
-                        document.getElementById('errorPrecioProducto').classList.add('visible');
-                        document.getElementById('mejorPrecio').value = '$0';
-                        document.getElementById('tiendaMejor').textContent = '';
-                        estado.textContent = '';
-                        document.getElementById('precioVenta').value = '';
-                    }
+                        </div>`).join('');
+                    const mejor = validos[0];
+                    mejorCostoEncontrado = mejor.valor;
+                    document.getElementById('mejorPrecio').value = '$' + formato(mejor.valor);
+                    document.getElementById('tiendaMejor').textContent = '✅ Mejor precio en ' + mejor.tienda + ': $' + formato(mejor.valor);
+                    recalcularVentaPorMargen();
                 }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('errorPrecioProducto').classList.add('visible');
-                estado.textContent = 'No fue posible completar la búsqueda automática.';
-                contenedor.innerHTML = '<p style="color:#d00;text-align:center">Error consultando tiendas.</p>';
-            } finally {
-                btn.textContent = '⚡ BUSCAR PRECIOS EN TIENDAS DE CHILE';
-                btn.disabled = false;
             }
+
+            actualizarProgreso();
+
+            const tareas = TIENDAS_CHILE.map(async (tienda) => {
+                const timeoutMs = tienda.prioridad === 1 ? 8000 : 6500;
+                try {
+                    let val = 0;
+                    if (tienda.api) {
+                        val = await buscarMercadoLibre(queryBusqueda, apiKey, timeoutMs);
+                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'API directa' };
+                    } else {
+                        val = await buscarTiendaConProxy(queryBusqueda, tienda.dominio, apiKey, timeoutMs);
+                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
+                    }
+                } catch(e) {
+                    return { tienda: tienda.nombre, key: tienda.key, valor: 0, fuente: 'error' };
+                }
+            });
+
+            tareas.forEach(p => p.then(r => {
+                completados++;
+                const elInput = document.getElementById('precio_' + r.key);
+                if (elInput) elInput.value = r.valor > 0 ? '$' + formato(r.valor) : 'No disponible';
+                if (r.valor > 0) { encontrados.push(r); renderParcial(); }
+                actualizarProgreso();
+            }).catch(()=>{ completados++; actualizarProgreso(); }));
+
+            await Promise.allSettled(tareas);
+
+            if (encontrados.length > 0) {
+                _setCached(desc, encontrados);
+                renderResultadosBusqueda(encontrados, desc, false, false);
+            } else {
+                const estimado = estimarPrecioPorAlgoritmo(desc);
+                if (estimado > 0) {
+                    const est = [{ tienda: 'Estimación interna', key: 'estimado', valor: estimado, fuente: 'Algoritmo' }];
+                    renderResultadosBusqueda(est, desc, true, false);
+                } else {
+                    mejorCostoEncontrado = 0;
+                    document.getElementById('errorPrecioProducto').classList.add('visible');
+                    document.getElementById('mejorPrecio').value = '$0';
+                    document.getElementById('tiendaMejor').textContent = '';
+                    estado.textContent = 'No se encontraron precios. Prueba con una descripción más específica (marca, modelo, potencia, medida).';
+                    contenedor.innerHTML = '<p style="color:#d00;text-align:center">Sin resultados en tiendas. Intenta con más detalle.</p>';
+                }
+            }
+            btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
+            btn.disabled = false;
         }
-        
-        async function buscarMercadoLibre(query, apiKey) {
+
+        function renderResultadosBusqueda(encontrados, desc, esEstimacion, desdeCache){
+            const contenedor = document.getElementById('resultadosPrecios');
+            const estado = document.getElementById('estadoPrecio');
+            const validos = encontrados.filter(x => x.valor > 0).sort((a,b)=>a.valor-b.valor);
+            if (!validos.length) return;
+            contenedor.innerHTML = validos.map(r => `
+                <div class="resultado-precio${esEstimacion?' estimado':''}">
+                    <strong>${r.tienda}</strong> — $${formato(r.valor)} <small>(${r.fuente}${desdeCache?' · caché':''})</small>
+                </div>`).join('');
+            const mejor = validos[0];
+            mejorCostoEncontrado = mejor.valor;
+            document.getElementById('mejorPrecio').value = '$' + formato(mejor.valor);
+            guardarHistorialPrecio(desc, mejor.valor, mejor.tienda, esEstimacion);
+            document.getElementById('tiendaMejor').textContent = esEstimacion
+                ? '⚠️ Mejor costo estimado: $' + formato(mejor.valor)
+                : '✅ Mejor precio en ' + mejor.tienda + ': $' + formato(mejor.valor);
+            estado.textContent = (esEstimacion
+                ? 'Precio estimado internamente. Verifica disponibilidad antes de cotizar.'
+                : 'Mejor precio encontrado en ' + mejor.tienda + ' entre ' + validos.length + ' tienda(s).') + (desdeCache ? ' (desde caché 30 min)' : '');
+            recalcularVentaPorMargen();
+        }
+
+        async function buscarMercadoLibre(query, apiKey, timeoutMs=8000) {
             try {
                 let targetUrl = `https://api.mercadolibre.com/sites/MLC/search?q=${encodeURIComponent(query)}&limit=10`;
                 if (apiKey) {
                     targetUrl = `https://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetUrl)}`;
                 }
-                const res = await fetch(targetUrl);
+                const res = await fetchWithTimeout(targetUrl, {}, timeoutMs);
                 if (res.ok) {
                     const data = await res.json();
                     let items = data.results || [];
@@ -944,18 +971,17 @@
                         if (precios.length > 0) return Math.min(...precios);
                     }
                 }
-            } catch(e) { console.error('Error ML:', e); }
+            } catch(e) { console.warn('ML:', e.message); }
             return 0;
         }
-        
-        async function buscarTiendaConProxy(query, dominio, apiKey) {
+
+        async function buscarTiendaConProxy(query, dominio, apiKey, timeoutMs=6500) {
             try {
-                const targetSearchUrl = `https://www.google.com/search?q=site:${dominio}+${encodeURIComponent(query)}+precio`;
+                const targetSearchUrl = `https://www.google.com/search?q=site:${dominio}+${encodeURIComponent(query)}+precio+Chile`;
                 const proxyUrl = apiKey
                     ? `https://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetSearchUrl)}`
                     : `https://api.allorigins.win/get?url=${encodeURIComponent(targetSearchUrl)}`;
-                
-                const res = await fetch(proxyUrl);
+                const res = await fetchWithTimeout(proxyUrl, {}, timeoutMs);
                 if (res.ok) {
                     let htmlContent = '';
                     if (apiKey) {
@@ -968,61 +994,69 @@
                     let match, precios = [];
                     while ((match = regex.exec(htmlContent)) !== null) {
                         const val = parseInt(match[1].replace(/\./g, ''), 10);
-                        if (val >= 500 && val <= 10000000) {
-                            precios.push(val);
-                        }
+                        if (val >= 500 && val <= 10000000) precios.push(val);
                     }
-                    if (precios.length > 0) {
-                        return Math.min(...precios);
-                    }
+                    if (precios.length > 0) return Math.min(...precios);
                 }
-            } catch(e) { console.error(`Error ${dominio}:`, e); }
+            } catch(e) { console.warn(dominio+':', e.message); }
             return 0;
         }
-        
+
         function estimarPrecioPorAlgoritmo(query) {
             const q = query.toLowerCase();
-            if (q.includes('cable')) {
-                if (q.includes('1.5') || q.includes('1,5')) return 22900;
-                if (q.includes('2.5') || q.includes('2,5')) return 34900;
-                if (q.includes('4') || q.includes('4mm')) return 58900;
-                if (q.includes('6') || q.includes('6mm')) return 89900;
-                if (q.includes('10') || q.includes('10mm')) return 149900;
-                return 28900;
-            }
-            if (q.includes('camarilla') || q.includes('camara')) {
-                if (q.includes('110')) return 18500;
-                if (q.includes('160')) return 26900;
-                if (q.includes('200')) return 34900;
-                return 19900;
-            }
-            if (q.includes('panel') && q.includes('solar')) {
-                if (q.includes('550') || q.includes('555')) return 289000;
-                if (q.includes('450') || q.includes('455')) return 239000;
-                if (q.includes('300') || q.includes('330')) return 169000;
-                return 199000;
+            // Fotovoltaica / energía
+            if (q.includes('panel') && (q.includes('solar') || q.includes('fotovolta'))) {
+                if (/6[0-9]{2}|7[0-9]{2}/.test(q)) return 149000;
+                if (/5[0-9]{2}/.test(q)) return 119000;
+                if (/4[0-9]{2}/.test(q)) return 99000;
+                return 109000;
             }
             if (q.includes('inversor') || q.includes('inverter')) {
-                if (q.includes('5kw') || q.includes('5 kw')) return 689000;
-                if (q.includes('3kw') || q.includes('3 kw')) return 459000;
-                if (q.includes('10kw') || q.includes('10 kw')) return 1290000;
+                if (/10s*kw|10000/.test(q)) return 1290000;
+                if (/5s*kw|5000/.test(q)) return 689000;
+                if (/3s*kw|3000/.test(q)) return 459000;
+                if (/1s*kw|1000/.test(q)) return 249000;
                 return 550000;
             }
-            if (q.includes('bateria') || q.includes('batería')) {
-                if (q.includes('lithium') || q.includes('litio')) return 890000;
-                if (q.includes('gel') || q.includes('plomo')) return 289000;
+            if (q.includes('bateria') || q.includes('batería') || q.includes('litio') || q.includes('lifepo4')) {
+                if (q.includes('litio') || q.includes('lifepo4')) return 890000;
+                if (q.includes('gel') || q.includes('agm')) return 289000;
                 return 350000;
             }
-            if (q.includes('estructura') || q.includes('rack')) return 75000;
+            if (q.includes('regulador') || q.includes('controlador') || q.includes('mppt')) return 89000;
+            if (q.includes('mc4') || q.includes('conector solar')) return 3500;
+            if (q.includes('estructura') || q.includes('riel') || q.includes('soporte solar')) return 75000;
+            // Eléctrico
+            if (q.includes('cable') || q.includes('conductor')) {
+                if (/1[.,]5/.test(q)) return 22900;
+                if (/2[.,]5/.test(q)) return 34900;
+                if (/4\b|4mm/.test(q)) return 58900;
+                if (/6\b|6mm/.test(q)) return 89900;
+                if (/10\b|10mm/.test(q)) return 149900;
+                return 28900;
+            }
+            if (q.includes('automático') || q.includes('automatico') || q.includes('breaker') || q.includes('disyuntor')) return 7990;
+            if (q.includes('tablero')) return 24990;
+            if (q.includes('canaleta') || q.includes('ducto')) return 4990;
+            if (q.includes('enchufe') || q.includes('interruptor')) return 2490;
+            if (q.includes('led') || q.includes('luminaria') || q.includes('ampolleta')) return 5990;
+            // Herramientas
+            if (q.includes('taladro')) return 49990;
+            if (q.includes('esmeril')) return 39990;
+            if (q.includes('sierra')) return 59990;
+            if (q.includes('martillo')) return 12990;
+            if (q.includes('destornillador') || q.includes('alicate')) return 8990;
+            // Construcción
             if (q.includes('cemento') || q.includes('hormigon')) return 4990;
             if (q.includes('yeso') || q.includes('vulcanita')) return 8990;
-            if (q.includes('enchufe') || q.includes('interruptor')) return 2490;
+            if (q.includes('pintura')) return 18990;
             if (q.includes('pvc') || q.includes('tubo')) return 6490;
-            if (q.includes('conector') || q.includes('mc4')) return 3500;
+            if (q.includes('tornillo') || q.includes('perno')) return 2990;
+            if (q.includes('ceramica') || q.includes('porcelanato')) return 12990;
             if (q.includes('instalacion') || q.includes('instalación') || q.includes('montaje')) return 150000;
             return 0;
         }
-        
+
         function guardarHistorialPrecio(termino, precio, tienda, estimado) {
             historialPrecios.unshift({
                 termino, precio, tienda, estimado,
@@ -1031,6 +1065,7 @@
             if (historialPrecios.length > 50) historialPrecios = historialPrecios.slice(0, 50);
             guardarLS('cotizador_historialPrecios', historialPrecios);
         }
+
         
         // =============================================================
         // AGREGAR / EDITAR / ELIMINAR ITEMS
