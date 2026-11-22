@@ -185,7 +185,8 @@ class Handler(BaseHTTPRequestHandler):
             files = {
                 '/': 'login.html', '/app': 'cotizador.html', '/admin': 'admin.html', '/license': 'license.html',
                 '/assets/server_bridge.js': 'server_bridge.js', '/assets/jspdf.umd.min.js': 'jspdf.umd.min.js',
-                '/assets/html2canvas.min.js': 'html2canvas.min.js', '/manifest.json': 'manifest.json', '/sw.js': 'sw.js'
+                '/assets/html2canvas.min.js': 'html2canvas.min.js', '/manifest.json': 'manifest.json', '/sw.js': 'sw.js',
+                '/download/apk': 'CotizadorPro-Android-debug.apk', '/CotizadorPro-Android-debug.apk': 'CotizadorPro-Android-debug.apk'
             }
             name = files.get(self.path.split('?', 1)[0])
         if not name or not (ROOT / 'frontend' / name).exists():
@@ -193,8 +194,19 @@ class Handler(BaseHTTPRequestHandler):
         b = (ROOT / 'frontend' / name).read_bytes()
         self.send_response(200)
         self.send_header('Cache-Control', 'no-store')
-        ct = 'application/javascript' if name.endswith('.js') else ('application/json' if name.endswith('.json') else 'text/html; charset=utf-8')
+        if name.endswith('.js'):
+            ct = 'application/javascript'
+        elif name.endswith('.json'):
+            ct = 'application/json'
+        elif name.endswith('.apk'):
+            ct = 'application/vnd.android.package-archive'
+        elif name.endswith('.png'):
+            ct = 'image/png'
+        else:
+            ct = 'text/html; charset=utf-8'
         self.send_header('Content-Type', ct)
+        if name.endswith('.apk'):
+            self.send_header('Content-Disposition', 'attachment; filename="CotizadorPro-Android-debug.apk"')
         self.send_header('Content-Length', str(len(b)))
         self.end_headers()
         self.wfile.write(b)
