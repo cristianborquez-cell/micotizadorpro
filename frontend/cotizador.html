@@ -1825,9 +1825,10 @@
                     reader.onerror = reject;
                     reader.readAsDataURL(blob);
                 });
+                const token = sessionStorage.getItem('cotizador_token') || window.AuthToken || '';
                 const res = await fetch('/api/send-email', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...(window.AuthToken ? { 'Authorization': 'Bearer ' + window.AuthToken } : {}) },
+                    headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
                     body: JSON.stringify({
                         to: to.trim(),
                         subject: 'Cotización ' + document.getElementById('numCotizacion').value,
@@ -1837,6 +1838,7 @@
                     })
                 });
                 const data = await res.json().catch(()=>({}));
+                if (res.status === 401) { sessionStorage.clear(); alert(data.detail || 'Sesión inválida. Vuelve a iniciar sesión.'); location='/'; return; }
                 if (!res.ok) throw new Error(data.detail || 'Error enviando correo');
                 alert('Correo enviado a ' + to.trim());
             } catch(err) {
