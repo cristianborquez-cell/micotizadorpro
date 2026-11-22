@@ -1,6 +1,6 @@
 (async function(){
 const token=sessionStorage.getItem('cotizador_token');if(!token){location='/';return}
-async function api(path,x){const r=await fetch(path,{method:x?'POST':'GET',cache:'no-store',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:x?JSON.stringify(x):undefined});const d=await r.json();if(!r.ok)throw Error(d.detail);return d}
+async function api(path,x){const r=await fetch(path,{method:x?'POST':'GET',cache:'no-store',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:x?JSON.stringify(x):undefined});const d=await r.json().catch(()=>({}));if(r.status===401){sessionStorage.clear();location='/';throw Error(d.detail||'Sesión inválida');}if(!r.ok)throw Error(d.detail||('Error '+r.status));return d}
 const bar=document.createElement('div');bar.style='position:sticky;top:0;z-index:99999;background:#fff;color:#123;padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap';const status=document.createElement('span');status.textContent='Comprobando cuenta…';bar.append(status);document.body.prepend(bar);
 function button(t,fn){const b=document.createElement('button');b.textContent=t;b.onclick=fn;bar.append(b)}
 button('🧾 Ingresa tus datos para tu cotizador',()=>{if(window.abrirDatosEmisor)window.abrirDatosEmisor();});
