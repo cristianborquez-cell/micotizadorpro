@@ -1810,9 +1810,10 @@
 
         async function enviarPorCorreo() {
             if (productos.length === 0) { alert('Agrega items primero.'); return; }
-            const toDefault = ((perfilEmisor && perfilEmisor.email) ? perfilEmisor.email : (document.getElementById('emailCliente')?.value || '')).trim();
-            const to = prompt('Correo destinatario (emisor):', toDefault);
+            const toDefault = (document.getElementById('emailCliente')?.value || '').trim();
+            const to = prompt('Para: ingresa el correo destinatario (cualquier correo válido)', toDefault);
             if (!to) return;
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) { alert('Ingrese un correo destinatario válido.'); return; }
             const btn = event?.target;
             const oldTxt = btn ? btn.textContent : '';
             if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
