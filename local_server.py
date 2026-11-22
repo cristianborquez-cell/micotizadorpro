@@ -497,9 +497,9 @@ class Handler(BaseHTTPRequestHandler):
                     telefono = (x.get('telefono') or '').strip().replace(' ', '')[:20]
                     direccion = (x.get('direccion') or '').strip()[:300]
                     if not nombres or not apellidos: fail('Ingrese nombres y apellidos')
-                    if not rut_valido(run): fail('RUN inválido. Use formato XXXXXXXX-X o K con dígito verificador válido')
+                    if not rut_valido(run): fail('Ingrese un RUN válido')
                     if not razon: fail('Ingrese razón social o nombre de fantasía')
-                    if not rut_valido(rut): fail('RUT inválido. Use formato XXXXXXXX-X o K con dígito verificador válido')
+                    if not rut_valido(rut): fail('Ingrese un RUT válido')
                     if not email or email.count('@') != 1 or '.' not in email.split('@')[-1] or any(ch.isspace() for ch in email): fail('Ingrese un correo electrónico válido')
                     import re
                     if not re.fullmatch(r'\+569\d{8}', telefono): fail('Teléfono inválido. Use formato +56912345678')
