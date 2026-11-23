@@ -628,8 +628,10 @@ ID usuario: {row_get(u,'id')}
                     if brevo_key:
                         try:
                             import urllib.request
+                            # Brevo requires a validated sender. Use SMTP_FROM/BREVO_SENDER as sender, emisor as reply-to.
+                            brevo_sender = (os.environ.get('BREVO_SENDER', '').strip() or smtp_from or from_addr)
                             payload = {
-                                'sender': {'email': from_addr or smtp_from, 'name': emisor_name or 'Cotizador Pro'},
+                                'sender': {'email': brevo_sender, 'name': emisor_name or 'Cotizador Pro'},
                                 'to': [{'email': to_addr}],
                                 'subject': subject,
                                 'textContent': body or 'Adjunto cotización.',
