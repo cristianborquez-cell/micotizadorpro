@@ -283,7 +283,7 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
   <button class="sb-btn btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
   <button class="sb-btn btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
 </aside>
-<script>document.body.classList.add('has-sidebar');</script>
+<script>document.body.classList.add('has-sidebar');function posSidebar(){var sb=document.querySelector('.actions-sidebar');var h=document.querySelector('.app-header')||document.querySelector('header');var t=document.querySelector('#cotizacion .card');var top=120;if(t){var r=t.getBoundingClientRect();top=Math.max(120,r.top+window.scrollY-10);}if(sb){sb.style.top=top+'px';sb.style.maxHeight='calc(100vh - '+(top+10)+'px)';}}window.addEventListener('load',posSidebar);window.addEventListener('resize',posSidebar);setTimeout(posSidebar,300);setTimeout(posSidebar,1000);</script>
 
     <div class="container" hidden>
         <header class="brand-header">
