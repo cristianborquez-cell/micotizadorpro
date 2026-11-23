@@ -1,6 +1,6 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-import os, sqlite3, json, secrets, hashlib, hmac, time, uuid, platform, threading, smtplib, ssl, base64
+import os, sqlite3, json, secrets, hashlib, hmac, time, uuid, platform, threading, smtplib, ssl, base64, socket
 from email.message import EmailMessage
 
 ROOT = Path(__file__).resolve().parent
@@ -639,21 +639,29 @@ ID usuario: {row_get(u,'id')}
                     msg.set_content(body or 'Adjunto cotización.')
                     msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=filename)
                     try:
-                        if smtp_port == 465:
-                            ctx = ssl.create_default_context()
-                            with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx, timeout=20) as s:
-                                if smtp_user:
-                                    s.login(smtp_user, smtp_pass)
-                                s.send_message(msg)
-                        else:
-                            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as s:
-                                s.ehlo()
-                                if smtp_tls:
-                                    s.starttls(context=ssl.create_default_context())
+                        # Force IPv4 to avoid "Network is unreachable" on hosts with broken IPv6
+                        _orig_gai = socket.getaddrinfo
+                        def _gai_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+                            return _orig_gai(host, port, socket.AF_INET, type, proto, flags)
+                        socket.getaddrinfo = _gai_ipv4
+                        try:
+                            if smtp_port == 465:
+                                ctx = ssl.create_default_context()
+                                with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx, timeout=20) as s:
+                                    if smtp_user:
+                                        s.login(smtp_user, smtp_pass)
+                                    s.send_message(msg)
+                            else:
+                                with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as s:
                                     s.ehlo()
-                                if smtp_user:
-                                    s.login(smtp_user, smtp_pass)
-                                s.send_message(msg)
+                                    if smtp_tls:
+                                        s.starttls(context=ssl.create_default_context())
+                                        s.ehlo()
+                                    if smtp_user:
+                                        s.login(smtp_user, smtp_pass)
+                                    s.send_message(msg)
+                        finally:
+                            socket.getaddrinfo = _orig_gai
                     except Exception as e:
                         return self.respond({'detail': 'No se pudo enviar el correo: ' + str(e)[:200]}, 500)
                     return self.respond({'ok': True})
