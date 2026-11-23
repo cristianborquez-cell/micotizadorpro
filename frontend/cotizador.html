@@ -254,9 +254,37 @@
         .resultado-precio{padding:6px 10px;margin:4px 0;background:#fff;border:1px solid #dce5ef;border-radius:6px;font-size:0.88rem;display:flex;justify-content:space-between;align-items:center}
         .resultado-precio.estimado{background:#fff8e8;border-color:#F5A400;color:#5f4600}
         .resultado-precio small{font-size:0.75rem;color:#536273;margin-left:6px}
-    </style>
+    
+/* Sidebar acciones */
+.actions-sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#0B2A4A;color:#fff;z-index:1200;padding:14px 10px;overflow-y:auto;box-shadow:2px 0 12px rgba(0,0,0,.15);transform:translateX(0);transition:transform .2s ease}
+.actions-sidebar h3{font-size:.9rem;margin:0 0 10px;padding:0 6px;color:#F5A400;letter-spacing:.5px}
+.actions-sidebar .sb-btn{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 10px;border:0;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600}
+.actions-sidebar .sb-btn:hover{filter:brightness(1.05)}
+.actions-toggle{display:none;position:fixed;left:10px;top:10px;z-index:1300;background:#0B2A4A;color:#fff;border:0;border-radius:8px;padding:10px 12px;font-size:1rem;cursor:pointer}
+body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar footer{margin-left:220px}
+@media(max-width:900px){
+  .actions-sidebar{transform:translateX(-100%);top:0}
+  .actions-sidebar.open{transform:translateX(0)}
+  .actions-toggle{display:block}
+  body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar footer{margin-left:0}
+}
+</style>
 </head>
 <body>
+<button class="actions-toggle" onclick="document.querySelector('.actions-sidebar').classList.toggle('open')">☰ Acciones</button>
+<aside class="actions-sidebar" aria-label="Acciones">
+  <h3>⚡ ACCIONES</h3>
+  <button class="sb-btn btn-success" id="btnPDF" onclick="generarPDF()">📄 DESCARGAR PDF</button>
+  <button class="sb-btn btn-primary" onclick="guardarCotizacion()">💾 Guardar</button>
+  <button class="sb-btn btn-info" onclick="duplicarCotizacion()">📋 Duplicar</button>
+  <button class="sb-btn btn-warning" onclick="nuevaCotizacion()">🗑️ Nueva</button>
+  <button class="sb-btn btn-secondary" onclick="compartirWhatsApp()">📲 WhatsApp PDF</button>
+  <button class="sb-btn btn-info" onclick="enviarPorCorreo()">✉️ Enviar por correo</button>
+  <button class="sb-btn btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
+  <button class="sb-btn btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
+</aside>
+<script>document.body.classList.add('has-sidebar');</script>
+
     <div class="container" hidden>
         <header class="brand-header">
             <div class="brand">
@@ -421,20 +449,7 @@
                 </div>
             </div>
             
-            <div class="card">
-                <h2>⚙️ Acciones <span style="float:right;font-size:.7rem;color:#087EBD;">V3.2 Local</span></h2>
-                <div class="form-row" style="flex-wrap:wrap;">
-                    <button class="btn-success" id="btnPDF" onclick="generarPDF()">📄 DESCARGAR PDF</button>
-                    <button class="btn-primary" onclick="guardarCotizacion()">💾 Guardar</button>
-                    <button class="btn-info" onclick="duplicarCotizacion()">📋 Duplicar</button>
-                    <button class="btn-warning" onclick="nuevaCotizacion()">🗑️ Nueva</button>
-                    <button class="btn-secondary" onclick="compartirWhatsApp()">📲 WhatsApp PDF</button>
-                    <button class="btn-info" onclick="enviarPorCorreo()">✉️ Enviar por correo</button>
-                    <button class="btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
-                    <button class="btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
-                </div>
             </div>
-        </div>
         
         <!-- SECCIÓN PLANTILLAS -->
         <div id="plantillas" class="seccion">
