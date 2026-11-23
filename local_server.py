@@ -8,7 +8,7 @@ DATA = Path(os.environ.get('COTIZADOR_DATA', str(ROOT / 'data')))
 DATA.mkdir(exist_ok=True)
 DEVICE = hashlib.sha256((platform.node() + str(uuid.getnode())).encode()).hexdigest()
 LOCK = threading.RLock()
-SESSIONS = {}
+# SESSIONS persisted in DB
 ATTEMPTS = {}
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
@@ -105,6 +105,11 @@ if IS_PG:
                 telefono TEXT,
                 direccion TEXT,
                 updated_at DOUBLE PRECISION
+            );
+            CREATE TABLE IF NOT EXISTS sessions(
+                token TEXT PRIMARY KEY,
+                user_id BIGINT,
+                exp DOUBLE PRECISION
             )
             ''')
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS license_identity ON licenses(license_id)')
@@ -144,6 +149,7 @@ CREATE TABLE IF NOT EXISTS quotes(user_id INTEGER,id TEXT,payload TEXT,PRIMARY K
             c.execute('CREATE UNIQUE INDEX IF NOT EXISTS license_identity ON licenses(license_id)')
             c.execute('CREATE TABLE IF NOT EXISTS admin_events(id INTEGER PRIMARY KEY,at REAL,actor_id INTEGER,user_id INTEGER,action TEXT,detail TEXT)')
             c.execute('CREATE TABLE IF NOT EXISTS user_profiles(user_id INTEGER PRIMARY KEY,nombres TEXT,apellidos TEXT,run TEXT,razon_social TEXT,rut TEXT,email TEXT,telefono TEXT,direccion TEXT,updated_at REAL)')
+            c.execute('CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER,exp REAL)')
 
 
 def digest(s):
@@ -323,9 +329,7 @@ class Handler(BaseHTTPRequestHandler):
                         fail('Código de recuperación incorrecto')
                     strong(x.get('password', ''))
                     c.execute('UPDATE users SET password=?,reset=NULL,reset_exp=NULL WHERE id=?', (password(x['password']), row_get(u, 'id')))
-                    for k in list(SESSIONS):
-                        if SESSIONS[k][0] == row_get(u, 'id'):
-                            del SESSIONS[k]
+                    c.execute('DELETE FROM sessions WHERE user_id=?', (row_get(u, 'id'),))
                     return self.respond({'ok': True})
 
                 if p == '/api/auth/login':
@@ -344,17 +348,19 @@ class Handler(BaseHTTPRequestHandler):
                         fail('Contraseña incorrecta')
                     ATTEMPTS.pop(key, None)
                     token = secrets.token_urlsafe(40)
-                    SESSIONS[token] = (row_get(u, 'id'), time.time() + 43200)
+                    c.execute('DELETE FROM sessions WHERE exp < ?', (time.time(),))
+                    c.execute('INSERT INTO sessions(token,user_id,exp) VALUES(?,?,?)', (token, row_get(u, 'id'), time.time() + 43200))
                     return self.respond({'access_token': token, 'user': {'id': row_get(u, 'id'), 'username': row_get(u, 'username'), 'role': row_get(u, 'role')}})
 
                 token = self.headers.get('Authorization', '').removeprefix('Bearer ')
-                session = SESSIONS.get(token)
-                u = c.execute('SELECT * FROM users WHERE id=?', (session[0],)).fetchone() if session and session[1] > time.time() else None
+                session = c.execute('SELECT user_id,exp FROM sessions WHERE token=?', (token,)).fetchone() if token else None
+                u = c.execute('SELECT * FROM users WHERE id=?', (row_get(session,'user_id'),)).fetchone() if session and (row_get(session,'exp') or 0) > time.time() else None
                 if not u or row_get(u, 'status') != 'activo':
+                    if session: c.execute('DELETE FROM sessions WHERE token=?', (token,))
                     return self.respond({'detail': 'Sesión inválida o cuenta restringida'}, 401)
 
                 if p == '/api/auth/logout':
-                    SESSIONS.pop(token, None)
+                    c.execute('DELETE FROM sessions WHERE token=?', (token,))
                     return self.respond({'ok': True})
                 if p == '/api/me':
                     return self.respond({'id': row_get(u, 'id'), 'username': row_get(u, 'username'), 'role': row_get(u, 'role')})
@@ -446,9 +452,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         fail('Acción desconocida')
                     record(c, row_get(u, 'id'), target, p.rsplit('/', 1)[-1], x.get('status', ''))
-                    for k in list(SESSIONS):
-                        if SESSIONS[k][0] == target:
-                            del SESSIONS[k]
+                    c.execute('DELETE FROM sessions WHERE user_id=?', (target,))
                     return self.respond({'ok': True})
 
                 if p == '/api/license/status':
