@@ -621,6 +621,15 @@ ID usuario: {row_get(u,'id')}
                     else:
                         msg['From'] = from_addr or smtp_from
                     msg['To'] = to_addr
+                    # CC al correo registrado por el emisor
+                    cc_list = []
+                    if emisor_email and emisor_email.lower() != to_addr.lower():
+                        cc_list.append(emisor_email)
+                    admin_notify = os.environ.get('ADMIN_NOTIFY_EMAIL','').strip()
+                    if admin_notify and admin_notify.lower() not in [to_addr.lower()] + [x.lower() for x in cc_list]:
+                        cc_list.append(admin_notify)
+                    if cc_list:
+                        msg['Cc'] = ', '.join(cc_list)
                     if emisor_email:
                         msg['Reply-To'] = emisor_email
                     msg.set_content(body or 'Adjunto cotización.')
