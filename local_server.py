@@ -605,6 +605,7 @@ ID usuario: {row_get(u,'id')}
                     smtp_pass = os.environ.get('SMTP_PASS', '').strip()
                     smtp_from = os.environ.get('SMTP_FROM', smtp_user).strip()
                     smtp_tls = os.environ.get('SMTP_TLS', '1').strip() != '0'
+                    brevo_key = os.environ.get('BREVO_API_KEY', '').strip()
                     # From: correo registrado del emisor (perfil) si existe; Reply-To igual
                     emisor_email = ''
                     emisor_name = ''
@@ -616,8 +617,43 @@ ID usuario: {row_get(u,'id')}
                     except Exception:
                         pass
                     from_addr = emisor_email if emisor_email else smtp_from
+                    cc_list = []
+                    if emisor_email and emisor_email.lower() != to_addr.lower():
+                        cc_list.append(emisor_email)
+                    admin_notify = os.environ.get('ADMIN_NOTIFY_EMAIL','').strip()
+                    if admin_notify and admin_notify.lower() not in [to_addr.lower()] + [x.lower() for x in cc_list]:
+                        cc_list.append(admin_notify)
+
+                    # Prefer Brevo HTTP API when available (works on Render free tier)
+                    if brevo_key:
+                        try:
+                            import urllib.request
+                            payload = {
+                                'sender': {'email': from_addr or smtp_from, 'name': emisor_name or 'Cotizador Pro'},
+                                'to': [{'email': to_addr}],
+                                'subject': subject,
+                                'textContent': body or 'Adjunto cotización.',
+                                'attachment': [{'content': pdf_b64, 'name': filename}]
+                            }
+                            if cc_list:
+                                payload['cc'] = [{'email': e} for e in cc_list]
+                            if emisor_email:
+                                payload['replyTo'] = {'email': emisor_email, 'name': emisor_name or emisor_email}
+                            req = urllib.request.Request('https://api.brevo.com/v3/smtp/email', data=json.dumps(payload).encode('utf-8'), headers={'accept':'application/json','api-key':brevo_key,'content-type':'application/json'}, method='POST')
+                            with urllib.request.urlopen(req, timeout=20) as resp:
+                                resp.read()
+                            return self.respond({'ok': True, 'provider': 'brevo'})
+                        except Exception as e:
+                            detail = str(e)
+                            try:
+                                if hasattr(e, 'read'):
+                                    detail = e.read().decode('utf-8', 'ignore')[:200]
+                            except Exception:
+                                pass
+                            return self.respond({'detail': 'No se pudo enviar el correo (Brevo): ' + detail[:200]}, 500)
+
                     if not smtp_host or not smtp_from:
-                        return self.respond({'detail': 'Correo no configurado en el servidor. Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM en variables de entorno.'}, 400)
+                        return self.respond({'detail': 'Correo no configurado. Configure SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM o BREVO_API_KEY en variables de entorno.'}, 400)
                     msg = EmailMessage()
                     msg['Subject'] = subject
                     if emisor_name and from_addr:
@@ -625,13 +661,6 @@ ID usuario: {row_get(u,'id')}
                     else:
                         msg['From'] = from_addr or smtp_from
                     msg['To'] = to_addr
-                    # CC al correo registrado por el emisor
-                    cc_list = []
-                    if emisor_email and emisor_email.lower() != to_addr.lower():
-                        cc_list.append(emisor_email)
-                    admin_notify = os.environ.get('ADMIN_NOTIFY_EMAIL','').strip()
-                    if admin_notify and admin_notify.lower() not in [to_addr.lower()] + [x.lower() for x in cc_list]:
-                        cc_list.append(admin_notify)
                     if cc_list:
                         msg['Cc'] = ', '.join(cc_list)
                     if emisor_email:
