@@ -1,5 +1,5 @@
 // Service Worker - Cotizador Pro
-const CACHE_NAME = 'cotizador-v5';
+const CACHE_NAME = 'cotizador-v6';
 const ASSETS = [
   '/', '/app', '/admin', '/license',
   '/manifest.json'
