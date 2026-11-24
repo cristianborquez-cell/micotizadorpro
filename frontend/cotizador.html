@@ -270,8 +270,10 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
 }
 
 /* APK Android mode */
-body.apk-mode{font-size:13px}
-body.apk-mode .container{padding:8px}
+body.apk-mode{font-size:13px;overflow-x:hidden;width:100%;max-width:100%}
+body.apk-mode .container{padding:8px;max-width:100%;overflow-x:hidden;box-sizing:border-box}
+body.apk-mode .brand-header,body.apk-mode .card,body.apk-mode .quote-style-card,body.apk-mode .copyright-footer,body.apk-mode .tabs{max-width:100%;box-sizing:border-box}
+body.apk-mode .brand,body.apk-mode .brand>div{min-width:0;max-width:100%}
 body.apk-mode .card{padding:10px;margin-bottom:10px}
 body.apk-mode h1{font-size:1.2rem}
 body.apk-mode h2{font-size:1rem}
@@ -298,7 +300,8 @@ body.apk-mode .brand-logo{width:30px;height:30px;min-width:30px;font-size:14px}
 body.apk-mode .brand-logo .brand-sun, body.apk-mode .brand-logo .brand-panel{font-size:12px}
 body.apk-mode .brand-header h1{font-size:.85rem !important;line-height:1.1;margin:0}
 body.apk-mode .brand-tagline{font-size:.5rem !important;margin:2px 0 0;letter-spacing:.3px}
-body.apk-mode .brand-actions{gap:4px;flex-wrap:nowrap;justify-content:flex-start;width:100%}
+body.apk-mode .brand-actions{gap:4px;flex-wrap:nowrap !important;flex-direction:row !important;align-items:center !important;justify-content:flex-start;width:100%;overflow-x:auto}
+body.apk-mode .brand-actions > *{min-width:0;flex:0 0 auto}
 body.apk-mode .country-badge, body.apk-mode .version-badge, body.apk-mode .toggle-dark{font-size:.52rem !important;padding:2px 5px !important;white-space:nowrap}
 body.apk-mode .subtitle{font-size:.52rem;margin-bottom:6px}
 body.apk-mode #autosaveStatus{font-size:.52rem !important}
