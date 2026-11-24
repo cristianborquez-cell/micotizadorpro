@@ -1017,7 +1017,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                 actualizarProgreso();
             }).catch(()=>{ completados++; actualizarProgreso(); }));
 
-            await Promise.allSettled(tareas);
+            await Promise.race([Promise.allSettled(tareas), new Promise(r => setTimeout(r, 25000))]);
 
             if (encontrados.length > 0) {
                 _setCached(desc, sitios.map(s=>s.dominio||'generico'), encontrados);
