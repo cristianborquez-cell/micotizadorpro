@@ -387,13 +387,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     ✏️ Editando item. Realiza los cambios y pulsa "ACTUALIZAR ITEM" o "CANCELAR".
                 </div>
                 
-                <div class="config-box">
-                    <strong>⚙️ Configuración Scraper Cloud / API Key (Opcional):</strong>
-                    <div class="form-row" style="margin-top:4px;">
-                        <div class="form-group"><input type="text" id="scraperApiKey" placeholder="API Key de ScraperAPI (Ej: a1b2c3d4...)" style="padding:6px;font-size:0.8rem;"></div>
-                    </div>
-                </div>
-                
+
                 <div class="form-row">
                     <div class="form-group"><label>Tipo</label>
                         <select id="tipoItem" onchange="cambiarTipo()">
@@ -946,7 +940,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             btn.disabled = true;
             document.getElementById('errorPrecioProducto').classList.remove('visible');
             contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
-            const apiKey = (document.getElementById('scraperApiKey').value || '').trim();
+            const apiKey = ''; // Scraper interno por backend
             const queryBusqueda = enriquecerQuery(desc);
 
             TIENDAS_CHILE.forEach(t => {
