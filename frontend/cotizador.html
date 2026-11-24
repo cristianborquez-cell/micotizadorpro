@@ -952,15 +952,15 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             const contenedor = document.getElementById('resultadosPrecios');
             btn.textContent = '⏳ Buscando precios en tiendas de Chile...';
             btn.disabled = true;
-            const _watchdog = setTimeout(()=>{ if(btn.disabled){ btn.textContent='🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE'; btn.disabled=false; if(!document.getElementById('estadoPrecio').textContent) document.getElementById('estadoPrecio').textContent='Búsqueda tardó demasiado. Intenta de nuevo o revisa tu conexión.'; } }, 30000);
+            const _watchdog = setTimeout(()=>{ if(btn.disabled){ btn.textContent='🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE'; btn.disabled=false; if(!estado.textContent) estado.textContent='Búsqueda tardó demasiado. Intenta de nuevo.'; } }, 35000);
             document.getElementById('errorPrecioProducto').classList.remove('visible');
             contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
             const apiKey = ''; // Scraper interno por backend
             const queryBusqueda = enriquecerQuery(desc);
-
             const sitios = obtenerSitiosBusqueda();
+            const cacheKey = sitios.map(s=>s.dominio||'generico');
 
-            const cached = _getCached(desc, sitios.map(s=>s.dominio||'generico'));
+            const cached = _getCached(desc, cacheKey);
             if (cached && cached.length) {
                 renderResultadosBusqueda(cached, desc, false, true);
                 clearTimeout(_watchdog);
@@ -971,18 +971,11 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
 
             const encontrados = [];
             let completados = 0;
-
-            function actualizarProgreso(){
-                estado.textContent = 'Buscando en tiendas... (' + completados + '/' + sitios.length + ')';
-            }
-
+            function actualizarProgreso(){ estado.textContent = 'Buscando en tiendas... (' + completados + '/' + sitios.length + ')'; }
             function renderParcial(){
                 const validos = encontrados.filter(x=>x.valor>0).sort((a,b)=>a.valor-b.valor);
                 if(validos.length){
-                    contenedor.innerHTML = validos.map(r => `
-                        <div class="resultado-precio">
-                            <strong>${r.tienda}</strong> — $${formato(r.valor)} <small>(${r.fuente})</small>
-                        </div>`).join('');
+                    contenedor.innerHTML = validos.map(r => `<div class="resultado-precio"><strong>${r.tienda}</strong> — $${formato(r.valor)} <small>(${r.fuente})</small></div>`).join('');
                     const mejor = validos[0];
                     mejorCostoEncontrado = mejor.valor;
                     document.getElementById('mejorPrecio').value = '$' + formato(mejor.valor);
@@ -990,45 +983,31 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     recalcularVentaPorMargen();
                 }
             }
-
             actualizarProgreso();
 
-            const conTimeout = (p, ms) => Promise.race([p, new Promise(res => setTimeout(() => res({timeout:true}), ms))]);
-            const tareas = sitios.map((tienda) => {
-                const timeoutMs = 7000;
-                const tarea = (async () => {
-                    try {
-                        let val = 0;
-                        if (!tienda.dominio) {
-                            val = await buscarGenericoChile(queryBusqueda, apiKey, timeoutMs);
-                            return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
-                        } else {
-                            val = await buscarTiendaConProxy(queryBusqueda, tienda.dominio, apiKey, timeoutMs);
-                            return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
-                        }
-                    } catch(e) {
-                        return { tienda: tienda.nombre, key: tienda.key, valor: 0, fuente: 'error' };
-                    }
-                })();
-                return conTimeout(tarea, 20000).then(r => r && r.timeout ? { tienda: tienda.nombre, key: tienda.key, valor: 0, fuente: 'timeout' } : r);
-            });
-
-            tareas.forEach(p => p.then(r => {
-                completados++;
-                if (r.valor > 0) { encontrados.push(r); renderParcial(); }
-                actualizarProgreso();
-            }).catch(()=>{ completados++; actualizarProgreso(); }));
-
-            await Promise.race([Promise.allSettled(tareas), new Promise(r => setTimeout(r, 25000))]);
+            for (const tienda of sitios) {
+                try {
+                    const timeoutMs = 7000;
+                    let tarea = tienda.dominio
+                        ? buscarTiendaConProxy(queryBusqueda, tienda.dominio, apiKey, timeoutMs)
+                        : buscarGenericoChile(queryBusqueda, apiKey, timeoutMs);
+                    const val = await Promise.race([tarea, new Promise(res => setTimeout(() => res(0), 20000))]);
+                    completados++;
+                    if (val > 0) { encontrados.push({ tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' }); renderParcial(); }
+                    actualizarProgreso();
+                } catch(e) {
+                    completados++;
+                    actualizarProgreso();
+                }
+            }
 
             if (encontrados.length > 0) {
-                _setCached(desc, sitios.map(s=>s.dominio||'generico'), encontrados);
+                _setCached(desc, cacheKey, encontrados);
                 renderResultadosBusqueda(encontrados, desc, false, false);
             } else {
                 const estimado = estimarPrecioPorAlgoritmo(desc);
                 if (estimado > 0) {
-                    const est = [{ tienda: 'Estimación interna', key: 'estimado', valor: estimado, fuente: 'Algoritmo' }];
-                    renderResultadosBusqueda(est, desc, true, false);
+                    renderResultadosBusqueda([{ tienda: 'Estimación interna', key: 'estimado', valor: estimado, fuente: 'Algoritmo' }], desc, true, false);
                 } else {
                     mejorCostoEncontrado = 0;
                     document.getElementById('errorPrecioProducto').classList.add('visible');
