@@ -270,8 +270,8 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
 }
 
 /* APK Android mode */
-body.apk-mode{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-size:13px;overflow-x:hidden;width:100%;max-width:100%;padding-bottom:max(var(--sab),28px)}
-body.apk-mode .container{padding:8px;max-width:100%;overflow-x:hidden;box-sizing:border-box}
+body.apk-mode{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-size:13px;overflow-x:hidden;width:100%;max-width:100%;padding-bottom:max(var(--sab),56px)}
+body.apk-mode .container{padding:8px 8px calc(8px + max(var(--sab),56px));max-width:100%;overflow-x:hidden;box-sizing:border-box}
 body.apk-mode .brand-header,body.apk-mode .card,body.apk-mode .quote-style-card,body.apk-mode .copyright-footer,body.apk-mode .tabs{max-width:100%;box-sizing:border-box}
 body.apk-mode .brand,body.apk-mode .brand>div{min-width:0;max-width:100%}
 body.apk-mode .card{padding:10px;margin-bottom:10px}
