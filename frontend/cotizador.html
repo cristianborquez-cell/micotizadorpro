@@ -952,6 +952,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             const contenedor = document.getElementById('resultadosPrecios');
             btn.textContent = '⏳ Buscando precios en tiendas de Chile...';
             btn.disabled = true;
+            const _watchdog = setTimeout(()=>{ if(btn.disabled){ btn.textContent='🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE'; btn.disabled=false; if(!document.getElementById('estadoPrecio').textContent) document.getElementById('estadoPrecio').textContent='Búsqueda tardó demasiado. Intenta de nuevo o revisa tu conexión.'; } }, 30000);
             document.getElementById('errorPrecioProducto').classList.remove('visible');
             contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
             const apiKey = ''; // Scraper interno por backend
@@ -962,6 +963,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             const cached = _getCached(desc, sitios.map(s=>s.dominio||'generico'));
             if (cached && cached.length) {
                 renderResultadosBusqueda(cached, desc, false, true);
+                clearTimeout(_watchdog);
                 btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
                 btn.disabled = false;
                 return;
@@ -1036,6 +1038,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     contenedor.innerHTML = '<p style="color:#d00;text-align:center">Sin resultados en tiendas. Intenta con más detalle.</p>';
                 }
             }
+            clearTimeout(_watchdog);
             btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
             btn.disabled = false;
         }
