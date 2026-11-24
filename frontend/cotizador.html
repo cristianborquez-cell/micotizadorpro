@@ -406,12 +406,18 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     
                     <div id="resultadosPrecios" style="margin:8px 0;padding:10px;background:#f8fbfd;border-radius:8px;font-size:0.9rem;"></div>
                     
-                    <div class="form-row" style="flex-wrap:wrap;">
-                        <div class="form-group" style="min-width:120px"><label>Mercado Libre</label><input type="text" id="precio_mercadolibre" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Sodimac</label><input type="text" id="precio_sodimac" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
-                        <div class="form-group" style="min-width:120px"><label>Easy</label><input type="text" id="precio_easy" readonly style="background:#EAF6FB;font-size:0.85rem;"></div>
+                    <div style="margin:8px 0;padding:10px;background:#f8fbfd;border-radius:8px;">
+                        <label style="font-size:.82rem;font-weight:600;color:#0B2A4A;display:block;margin-bottom:6px;">🔎 Sitios de búsqueda (hasta 5, opcional)</label>
+                        <div class="form-row" style="flex-wrap:wrap;gap:6px;">
+                            <div class="form-group" style="min-width:180px;flex:1"><input type="text" id="sitioBusqueda1" placeholder="www.ejemplo.cl" style="font-size:.82rem;padding:7px"></div>
+                            <div class="form-group" style="min-width:180px;flex:1"><input type="text" id="sitioBusqueda2" placeholder="www.ejemplo.cl" style="font-size:.82rem;padding:7px"></div>
+                            <div class="form-group" style="min-width:180px;flex:1"><input type="text" id="sitioBusqueda3" placeholder="www.ejemplo.cl" style="font-size:.82rem;padding:7px"></div>
+                            <div class="form-group" style="min-width:180px;flex:1"><input type="text" id="sitioBusqueda4" placeholder="www.ejemplo.cl" style="font-size:.82rem;padding:7px"></div>
+                            <div class="form-group" style="min-width:180px;flex:1"><input type="text" id="sitioBusqueda5" placeholder="www.ejemplo.cl" style="font-size:.82rem;padding:7px"></div>
+                        </div>
+                        <div style="font-size:.72rem;color:#536273;margin-top:4px;">Si no ingresas sitios, se realizará una búsqueda genérica en Chile por la descripción.</div>
                     </div>
-                    <div id="errorPrecioProducto" class="error-precio">⚠️ No se pudo extraer el precio automático desde ninguna tienda. Ajusta el término de búsqueda.</div>
+                    <div id="errorPrecioProducto" class="error-precio">⚠️ No se pudo extraer el precio automático. Ajusta el término de búsqueda o los sitios.</div>
                     <div class="form-row">
                         <div class="form-group"><label>Mejor Precio Costo (Automático) ✅</label><input type="text" id="mejorPrecio" value="$0" readonly style="background:#EAF6FB;font-weight:bold;color:#0B2A4A"></div>
                     </div>
@@ -901,16 +907,23 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
         // BÚSQUEDA AUTOMÁTICA DE PRECIOS – CHILE (optimizada)
         // =============================================================
 
-        const TIENDAS_CHILE = [
-            { nombre: 'Mercado Libre', key: 'mercadolibre', api: true, prioridad: 1 },
-            { nombre: 'Sodimac', key: 'sodimac', dominio: 'sodimac.cl', prioridad: 1 },
-            { nombre: 'Easy', key: 'easy', dominio: 'easy.cl', prioridad: 1 }
-        ];
+        function obtenerSitiosBusqueda() {
+            const sitios = [];
+            for (let i=1; i<=5; i++) {
+                const el = document.getElementById('sitioBusqueda'+i);
+                let v = (el?.value || '').trim();
+                if (!v) continue;
+                v = v.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLower();
+                if (v && !sitios.includes(v)) sitios.push(v);
+            }
+            if (sitios.length) return sitios.map((d,i)=>({ nombre: d, key: 'sitio'+(i+1), dominio: d, prioridad: 1 }));
+            return [{ nombre: 'Búsqueda general Chile', key: 'generico', dominio: '', prioridad: 1 }];
+        }
 
         const _priceCache = new Map();
-        function _cacheKey(q){ return q.toLowerCase().replace(/\s+/g,' ').trim(); }
-        function _getCached(q){ const k=_cacheKey(q); const e=_priceCache.get(k); if(e && Date.now()-e.ts < 30*60*1000) return e.data; return null; }
-        function _setCached(q,data){ _priceCache.set(_cacheKey(q), {ts:Date.now(), data}); }
+        function _cacheKey(q, sites){ const s=(sites||[]).join(',').toLowerCase(); return (q.toLowerCase().replace(/\s+/g,' ').trim())+'|'+s; }
+        function _getCached(q, sites){ const k=_cacheKey(q, sites); const e=_priceCache.get(k); if(e && Date.now()-e.ts < 30*60*1000) return e.data; return null; }
+        function _setCached(q, sites, data){ _priceCache.set(_cacheKey(q, sites), {ts:Date.now(), data}); }
 
         async function fetchWithTimeout(url, opts={}, ms=7000){
             const ctrl = new AbortController();
@@ -944,12 +957,9 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             const apiKey = ''; // Scraper interno por backend
             const queryBusqueda = enriquecerQuery(desc);
 
-            TIENDAS_CHILE.forEach(t => {
-                const el = document.getElementById('precio_' + t.key);
-                if (el) el.value = 'Buscando...';
-            });
+            const sitios = obtenerSitiosBusqueda();
 
-            const cached = _getCached(desc);
+            const cached = _getCached(desc, sitios.map(s=>s.dominio||'generico'));
             if (cached && cached.length) {
                 renderResultadosBusqueda(cached, desc, false, true);
                 btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
@@ -961,7 +971,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             let completados = 0;
 
             function actualizarProgreso(){
-                estado.textContent = 'Buscando en tiendas... (' + completados + '/' + TIENDAS_CHILE.length + ')';
+                estado.textContent = 'Buscando en tiendas... (' + completados + '/' + sitios.length + ')';
             }
 
             function renderParcial(){
@@ -981,13 +991,13 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
 
             actualizarProgreso();
 
-            const tareas = TIENDAS_CHILE.map(async (tienda) => {
-                const timeoutMs = 5000;
+            const tareas = sitios.map(async (tienda) => {
+                const timeoutMs = 7000;
                 try {
                     let val = 0;
-                    if (tienda.api) {
-                        val = await buscarMercadoLibre(queryBusqueda, apiKey, timeoutMs);
-                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'API directa' };
+                    if (!tienda.dominio) {
+                        val = await buscarGenericoChile(queryBusqueda, apiKey, timeoutMs);
+                        return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
                     } else {
                         val = await buscarTiendaConProxy(queryBusqueda, tienda.dominio, apiKey, timeoutMs);
                         return { tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' };
@@ -1008,7 +1018,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             await Promise.allSettled(tareas);
 
             if (encontrados.length > 0) {
-                _setCached(desc, encontrados);
+                _setCached(desc, sitios.map(s=>s.dominio||'generico'), encontrados);
                 renderResultadosBusqueda(encontrados, desc, false, false);
             } else {
                 const estimado = estimarPrecioPorAlgoritmo(desc);
@@ -1130,6 +1140,36 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     if (precios.length > 0) return Math.min(...precios);
                 }
             } catch(e) { console.warn(dominio+':', e.message); }
+            return 0;
+        }
+
+        async function buscarGenericoChile(query, apiKey, timeoutMs=7000) {
+            try {
+                const targetSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}+precio+Chile`;
+                let htmlContent = '';
+                if (apiKey) {
+                    const proxyUrl = `https://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetSearchUrl)}`;
+                    const res = await fetchWithTimeout(proxyUrl, {}, timeoutMs);
+                    if (res.ok) htmlContent = await res.text();
+                } else {
+                    try {
+                        htmlContent = await fetchViaBackend(targetSearchUrl, 15000);
+                    } catch(e) {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetSearchUrl)}`;
+                        const res = await fetchWithTimeout(proxyUrl, {}, timeoutMs);
+                        if (res.ok) { const data = await res.json(); htmlContent = data.contents || ''; }
+                    }
+                }
+                if (htmlContent) {
+                    const regex = /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+)/g;
+                    let match, precios = [];
+                    while ((match = regex.exec(htmlContent)) !== null) {
+                        const val = parseInt(match[1].replace(/\./g, ''), 10);
+                        if (val >= 500 && val <= 10000000) precios.push(val);
+                    }
+                    if (precios.length > 0) return Math.min(...precios);
+                }
+            } catch(e) { console.warn('generico:', e.message); }
             return 0;
         }
 
@@ -1322,9 +1362,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
         
         function limpiarCampos() {
             document.getElementById('descripcion').value = '';
-            document.getElementById('precio_mercadolibre').value = '';
-            document.getElementById('precio_sodimac').value = '';
-            document.getElementById('precio_easy').value = '';
+
             document.getElementById('precioServicio').value = '';
             document.getElementById('mejorPrecio').value = '$0';
             document.getElementById('tiendaMejor').textContent = '';
