@@ -1051,7 +1051,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                 headers: {'Content-Type':'application/json', ...(token ? {'Authorization':'Bearer '+token} : {})},
                 body: JSON.stringify({url: targetUrl})
             }, timeoutMs);
-            const d = await r.json().catch(()=>({}));
+            const d = await Promise.race([r.json().catch(()=>({})), new Promise(res => setTimeout(()=>res({detail:'timeout'}), 10000))]);
             if (!r.ok) throw new Error(d.detail || 'Error scraper interno');
             return d.content || '';
         }
