@@ -3,7 +3,7 @@ const token=sessionStorage.getItem('cotizador_token');if(!token){location='/';re
 async function api(path,x){const r=await fetch(path,{method:x?'POST':'GET',cache:'no-store',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:x?JSON.stringify(x):undefined});const d=await r.json().catch(()=>({}));if(r.status===401){sessionStorage.clear();location='/';throw Error(d.detail||'Sesión inválida');}if(!r.ok)throw Error(d.detail||('Error '+r.status));return d}
 const bar=document.createElement('div');bar.style='position:sticky;top:0;z-index:99999;background:#fff;color:#123;padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap';const status=document.createElement('span');status.textContent='Comprobando cuenta…';bar.append(status);document.body.prepend(bar);
 function button(t,fn){const b=document.createElement('button');b.textContent=t;b.onclick=fn;bar.append(b)}
-button('🧾 Ingresa tus datos para tu cotizador',()=>{if(window.abrirDatosEmisor)window.abrirDatosEmisor();});
+if(/CotizadorProApp/i.test(navigator.userAgent)){const b=document.createElement('button');b.textContent='☰ Acciones';b.className='apk-actions-btn';b.onclick=()=>{const sb=document.querySelector('.actions-sidebar'); if(sb) sb.classList.toggle('open');};bar.append(b);}button('🧾 Ingresa tus datos para tu cotizador',()=>{if(window.abrirDatosEmisor)window.abrirDatosEmisor();});
 button('Cerrar sesión',async()=>{await api('/api/auth/logout',{}).catch(()=>{});sessionStorage.clear();location='/'});
 try{const me=await api('/api/me');const license=me.role==='admin'?{active:true}:await api('/api/license/status');if(!license.active){location='/license';return}
 // Cada cuenta conserva un historial y borrador independientes en el navegador.
