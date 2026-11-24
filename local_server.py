@@ -585,6 +585,28 @@ ID usuario: {row_get(u,'id')}
                 licensed = row_get(u, 'role') == 'admin' or c.execute('SELECT 1 FROM licenses WHERE user_id=? AND revoked=0' + ('' if IS_PG else ' AND device=?'), (row_get(u, 'id'),) if IS_PG else (row_get(u, 'id'), DEVICE)).fetchone()
                 if not licensed:
                     return self.respond({'detail': 'Active el PIN de licencia para este equipo'}, 403)
+                if p == '/api/scraper/fetch':
+                    target = (x.get('url') or '').strip()
+                    if not target.startswith(('http://','https://')):
+                        return self.respond({'detail':'URL inválida'}, 400)
+                    api_key = (os.environ.get('SCRAPER_API_KEY') or '').strip()
+                    if not api_key:
+                        return self.respond({'detail':'SCRAPER_API_KEY no configurada'}, 503)
+                    import urllib.parse as _up
+                    fetch_url = 'https://api.scraperapi.com?api_key=' + _up.quote(api_key, safe='') + '&url=' + _up.quote(target, safe='')
+                    try:
+                        import urllib.request as _ur
+                        req = _ur.Request(fetch_url, headers={'User-Agent':'CotizadorPro/1.0'})
+                        with _ur.urlopen(req, timeout=25) as resp:
+                            raw = resp.read(2_000_000)
+                            ctype = (resp.headers.get('Content-Type') or '').lower()
+                        if 'text/html' in ctype or 'text/plain' in ctype or 'json' in ctype or 'xml' in ctype:
+                            content = raw.decode('utf-8', errors='replace')
+                        else:
+                            content = raw.decode('utf-8', errors='replace')
+                        return self.respond({'ok':True,'content':content[:1_500_000]})
+                    except Exception as e:
+                        return self.respond({'detail':'Error scraper: ' + str(e)[:200]}, 502)
                 if p == '/api/send-email':
                     to_addr = (x.get('to') or '').strip()
                     subject = (x.get('subject') or 'Cotización').strip()[:200]
