@@ -1115,6 +1115,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     }
                 }
                 if (htmlContent) {
+                    htmlContent = htmlContent.slice(0, 200000);
                     const regex = /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+)/g;
                     let match, precios = [];
                     while ((match = regex.exec(htmlContent)) !== null) {
@@ -1145,6 +1146,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     }
                 }
                 if (htmlContent) {
+                    htmlContent = htmlContent.slice(0, 200000);
                     const regex = /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+)/g;
                     let match, precios = [];
                     while ((match = regex.exec(htmlContent)) !== null) {
