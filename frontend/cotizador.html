@@ -268,6 +268,19 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
   .actions-toggle{display:block}
   body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar footer{margin-left:0}
 }
+
+/* APK Android mode */
+body.apk-mode{font-size:13px}
+body.apk-mode .container{padding:8px}
+body.apk-mode .card{padding:10px;margin-bottom:10px}
+body.apk-mode h1{font-size:1.2rem}
+body.apk-mode h2{font-size:1rem}
+body.apk-mode .btn, body.apk-mode button, body.apk-mode input, body.apk-mode select, body.apk-mode textarea{font-size:.82rem;padding:7px 8px}
+body.apk-mode .actions-toggle{display:none !important}
+body.apk-mode .actions-sidebar{top:52px;width:200px}
+body.apk-mode .actions-sidebar .sb-btn{font-size:.78rem;padding:8px}
+body.apk-mode table{font-size:.78rem}
+body.apk-mode th, body.apk-mode td{padding:6px}
 </style>
 </head>
 <body>
@@ -283,7 +296,7 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
   <button class="sb-btn btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
   <button class="sb-btn btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
 </aside>
-<script>document.body.classList.add('has-sidebar');function posSidebar(){var sb=document.querySelector('.actions-sidebar');var h=document.querySelector('.app-header')||document.querySelector('header');var t=document.querySelector('#cotizacion .card');var top=120;if(t){var r=t.getBoundingClientRect();top=Math.max(120,r.top+window.scrollY-10);}if(sb){sb.style.top=top+'px';sb.style.maxHeight='calc(100vh - '+(top+10)+'px)';}}window.addEventListener('load',posSidebar);window.addEventListener('resize',posSidebar);setTimeout(posSidebar,300);setTimeout(posSidebar,1000);</script>
+<script>document.body.classList.add('has-sidebar'); if(/CotizadorProApp/i.test(navigator.userAgent)) document.body.classList.add('apk-mode');function posSidebar(){var sb=document.querySelector('.actions-sidebar');var h=document.querySelector('.app-header')||document.querySelector('header');var t=document.querySelector('#cotizacion .card');var top=120;if(t){var r=t.getBoundingClientRect();top=Math.max(120,r.top+window.scrollY-10);}if(sb){sb.style.top=top+'px';sb.style.maxHeight='calc(100vh - '+(top+10)+'px)';}}window.addEventListener('load',posSidebar);window.addEventListener('resize',posSidebar);setTimeout(posSidebar,300);setTimeout(posSidebar,1000);</script>
 
     <div class="container" hidden>
         <header class="brand-header">
