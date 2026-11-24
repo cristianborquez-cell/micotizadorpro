@@ -913,7 +913,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                 const el = document.getElementById('sitioBusqueda'+i);
                 let v = (el?.value || '').trim();
                 if (!v) continue;
-                v = v.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLower();
+                v = v.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLowerCase();
                 if (v && !sitios.includes(v)) sitios.push(v);
             }
             if (sitios.length) return sitios.map((d,i)=>({ nombre: d, key: 'sitio'+(i+1), dominio: d, prioridad: 1 }));
