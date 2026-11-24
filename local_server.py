@@ -604,7 +604,7 @@ ID usuario: {row_get(u,'id')}
                             content = raw.decode('utf-8', errors='replace')
                         else:
                             content = raw.decode('utf-8', errors='replace')
-                        return self.respond({'ok':True,'content':content[:1_500_000]})
+                        return self.respond({'ok':True,'content':content[:300_000]})
                     except Exception as e:
                         return self.respond({'detail':'Error scraper: ' + str(e)[:200]}, 502)
                 if p == '/api/send-email':
