@@ -271,7 +271,7 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
 
 /* APK Android mode */
 body.apk-mode{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-size:13px;overflow-x:hidden;width:100%;max-width:100%;padding-bottom:max(var(--sab),56px)}
-body.apk-mode .container{padding:8px 8px calc(8px + max(var(--sab),56px));max-width:100%;overflow-x:hidden;box-sizing:border-box}
+body.apk-mode .container{padding:8px;max-width:100%;overflow-x:hidden;box-sizing:border-box}
 body.apk-mode .brand-header,body.apk-mode .card,body.apk-mode .quote-style-card,body.apk-mode .copyright-footer,body.apk-mode .tabs{max-width:100%;box-sizing:border-box}
 body.apk-mode .brand,body.apk-mode .brand>div{min-width:0;max-width:100%}
 body.apk-mode .card{padding:10px;margin-bottom:10px}
@@ -294,6 +294,7 @@ body.apk-mode .copyright-footer{padding:6px 8px;font-size:.55rem;line-height:1.2
 body.apk-mode .copyright-footer .copyright-brand{font-size:.62rem;margin-bottom:2px}
 body.apk-mode .copyright-footer .cb-mark{font-size:1rem;min-width:28px;height:28px;padding:4px}
 body.apk-mode .copyright-footer div{margin:0}
+body.apk-mode .quote-validity{margin:4px 8px !important;padding:6px 8px !important;font-size:.68rem !important}
 body.apk-mode .brand-header{padding:6px 8px;gap:4px;margin-bottom:6px;flex-direction:column;align-items:stretch}
 body.apk-mode .brand{gap:6px}
 body.apk-mode .brand-logo{width:30px;height:30px;min-width:30px;font-size:14px}
@@ -2109,7 +2110,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
         
         // Inicialización autenticada a cargo de server_bridge.js
     </script>
-<script src="/assets/server_bridge.js?v=20260423"></script>
+<script src="/assets/server_bridge.js?v=20260424"></script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then((reg) => {
