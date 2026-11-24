@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cotizador Pro Híbrido v4.0 Web | Diseñado por Cristian Borquez</title>
     <meta name="theme-color" content="#0B2A4A">
     <meta name="mobile-web-app-capable" content="yes">
@@ -270,7 +270,7 @@ body.has-sidebar .container, body.has-sidebar .app-header, body.has-sidebar foot
 }
 
 /* APK Android mode */
-body.apk-mode{font-size:13px;overflow-x:hidden;width:100%;max-width:100%}
+body.apk-mode{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);font-size:13px;overflow-x:hidden;width:100%;max-width:100%;padding-bottom:var(--sab)}
 body.apk-mode .container{padding:8px;max-width:100%;overflow-x:hidden;box-sizing:border-box}
 body.apk-mode .brand-header,body.apk-mode .card,body.apk-mode .quote-style-card,body.apk-mode .copyright-footer,body.apk-mode .tabs{max-width:100%;box-sizing:border-box}
 body.apk-mode .brand,body.apk-mode .brand>div{min-width:0;max-width:100%}
@@ -279,7 +279,7 @@ body.apk-mode h1{font-size:1.2rem}
 body.apk-mode h2{font-size:1rem}
 body.apk-mode .btn, body.apk-mode button, body.apk-mode input, body.apk-mode select, body.apk-mode textarea{font-size:.82rem;padding:7px 8px}
 body.apk-mode .actions-toggle{display:none !important}
-body.apk-mode .actions-sidebar{top:52px;width:200px}
+body.apk-mode .actions-sidebar{top:calc(52px + var(--sat,0px));width:200px}
 body.apk-mode .actions-sidebar .sb-btn{font-size:.78rem;padding:8px}
 body.apk-mode table{font-size:.78rem}
 body.apk-mode th, body.apk-mode td{padding:6px}
@@ -320,7 +320,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
   <button class="sb-btn btn-secondary" onclick="exportarRespaldo()">📥 Respaldar</button>
   <button class="sb-btn btn-secondary" onclick="actualizarTipoCambio()">🔄 Actualizar TC</button>
 </aside>
-<script>document.body.classList.add('has-sidebar'); if(/CotizadorProApp/i.test(navigator.userAgent)) document.body.classList.add('apk-mode');function posSidebar(){var sb=document.querySelector('.actions-sidebar');var h=document.querySelector('.app-header')||document.querySelector('header');var t=document.querySelector('#cotizacion .card');var top=120;if(t){var r=t.getBoundingClientRect();top=Math.max(120,r.top+window.scrollY-10);}if(sb){sb.style.top=top+'px';sb.style.maxHeight='calc(100vh - '+(top+10)+'px)';}}window.addEventListener('load',posSidebar);window.addEventListener('resize',posSidebar);setTimeout(posSidebar,300);setTimeout(posSidebar,1000);</script>
+<script>document.body.classList.add('has-sidebar'); if(/CotizadorProApp/i.test(navigator.userAgent)) document.body.classList.add('apk-mode');function posSidebar(){var sb=document.querySelector('.actions-sidebar');var t=document.querySelector('#cotizacion .card');var isApk=document.body.classList.contains('apk-mode');var sat=isApk?parseFloat(getComputedStyle(document.body).getPropertyValue('--sat'))||0:0;var sab=isApk?parseFloat(getComputedStyle(document.body).getPropertyValue('--sab'))||0:0;var top=120+sat;if(t){var r=t.getBoundingClientRect();top=Math.max(120+sat,r.top+window.scrollY-10);}if(sb){sb.style.top=top+'px';sb.style.maxHeight='calc(100vh - '+(top+10+sab)+'px)';}}window.addEventListener('load',posSidebar);window.addEventListener('resize',posSidebar);setTimeout(posSidebar,300);setTimeout(posSidebar,1000);</script>
 
     <div class="container" hidden>
         <header class="brand-header">
