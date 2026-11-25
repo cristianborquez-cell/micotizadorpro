@@ -1223,7 +1223,15 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                 const broad2 = 'https://html.duckduckgo.com/html/?q='+encodeURIComponent(qClean.slice(0,50)+' '+domain+' precio Chile');
                                 urlsToTry = [broad, broad2, targetSearchUrl, 'https://www.'+domain+'/?s='+dq];
                             }
-                            for(const u of urlsToTry.slice(0,4)){
+                            if(domain){
+                                try{
+                                    const home = await fetchHtml('https://www.'+domain+'/');
+                                    const qS = qClean.replace(/\\b(fotovoltaico|solar|electrico|herramienta|construccion)\\b/gi,'').replace(/\\s+/g,' ').trim() || qClean;
+                                    const siteSearch = findSiteSearch(home, 'https://www.'+domain+'/', qS);
+                                    if(siteSearch) urlsToTry.unshift(siteSearch);
+                                }catch(_e){}
+                            }
+                            for(const u of urlsToTry.slice(0,5)){
                                 try{
                                     const html = await fetchHtml(u);
                                     candidates = candidates.concat(scorePrices(html, qTokens, u));
