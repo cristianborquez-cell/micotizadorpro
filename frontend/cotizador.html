@@ -1174,10 +1174,10 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const maxPage = Math.max(...candidates.map(c=>c.pageScore||0));
                             let poolAll = candidates;
                             if(maxPage >= 4){
-                                // keep only best-matching product pages
-                                let bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2 && (c.hasH1 || c.hasUrl || (c.pageScore||0)>=maxPage));
-                                if(!bestPage.length) bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2);
+                                // keep only product pages where H1/URL match model tokens
+                                let bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2 && (c.hasH1 || c.hasUrl));
                                 if(bestPage.length) poolAll = bestPage;
+                                else poolAll = candidates.filter(c=>(c.pageScore||0)>=maxPage);
                             }
                             const specials = poolAll.filter(c=>c.special && c.val>=10000);
                             if(specials.length){
