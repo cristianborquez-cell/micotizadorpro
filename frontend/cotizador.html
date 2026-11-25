@@ -1117,7 +1117,8 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const lower = html.toLowerCase();
                             const candidates = [];
                             const toks = (tokens||[]).filter(t=>t.length>=2);
-                            const hasModel = toks.length ? toks.some(t=>lower.includes(t)) : false;
+                            const distinctive = toks.filter(t=>/\\d/.test(t) || (t.length>=5 && !['panel','solar','inversor','bateria','baterias','cable','cables','controlador','regulador','estructura','kit','sistema'].includes(t)));
+                            const hasModel = distinctive.length ? distinctive.some(t=>lower.includes(t)) : toks.some(t=>lower.includes(t));
                             const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special}); };
                             const ldRe = /"price"\\s*:\\s*"?([0-9][0-9.,]*)"?/gi;
                             let m;
@@ -1134,11 +1135,12 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                 if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)){ score += 3; special=true; }
                                 if(/precio|price|valor/.test(ctx)) score += 2;
                                 if(/normal|antes|tachado|lista|regular|cuota|envio|despacho|shipping|usd|uf/.test(ctx)) score -= 3;
-                                if(toks.length){
-                                    const near = toks.filter(t=>ctx.includes(t)).length;
-                                    if(near>0) score += 4 + Math.min(near,3);
+                                const dtoks = distinctive.length ? distinctive : toks;
+                                if(dtoks.length){
+                                    const near = dtoks.filter(t=>ctx.includes(t)).length;
+                                    if(near>0) score += 5 + Math.min(near,3)*2;
                                     else if(hasModel) score += 1;
-                                    else score -= 2;
+                                    else score -= 3;
                                 }
                                 add(val, score, special);
                             }
