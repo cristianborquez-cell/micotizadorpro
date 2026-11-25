@@ -1241,7 +1241,8 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const domain = domMatch ? domMatch[1].replace(/^www\\./,'').replace(/%2F/gi,'/') : '';
                             const qMatch = targetSearchUrl.match(/[?&]q=([^&]+)/i);
                             const qRaw = qMatch ? decodeURIComponent(qMatch[1].replace(/\\+/g,' ')) : '';
-                            const qClean = qRaw.replace(/site:\\S+/gi,'').replace(/precio Chile/gi,'').trim();
+                            let qClean = qRaw.replace(/site:\\S+/gi,'').replace(/precio Chile/gi,'').trim();
+                            qClean = qClean.split(/\\s+/).map(w=>{ const n=norm(w); if(CORR[n]) return CORR[n]; return w; }).join(' ');
                             const qTokens=tokensFromQuery(qClean);
                             let urlsToTry = [targetSearchUrl];
                             if(domain){
