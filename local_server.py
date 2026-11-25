@@ -593,7 +593,8 @@ ID usuario: {row_get(u,'id')}
                     if not api_key:
                         return self.respond({'detail':'SCRAPER_API_KEY no configurada'}, 503)
                     import urllib.parse as _up
-                    fetch_url = 'https://api.scraperapi.com?api_key=' + _up.quote(api_key, safe='') + '&url=' + _up.quote(target, safe='')
+                    # render=true helps JS-heavy ecommerce sites; keep timeout reasonable
+                    fetch_url = 'https://api.scraperapi.com?api_key=' + _up.quote(api_key, safe='') + '&render=true&country_code=cl&device_type=desktop&url=' + _up.quote(target, safe='')
                     try:
                         import urllib.request as _ur
                         req = _ur.Request(fetch_url, headers={'User-Agent':'CotizadorPro/1.0'})
