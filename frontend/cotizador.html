@@ -1113,38 +1113,48 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         const t = setTimeout(()=>ctrl.abort(), timeoutMs);
                         const priceRe = /\\$\\s*([0-9]{1,3}(?:\\.[0-9]{3})+|[0-9]{4,7})/g;
                         function pageRelevance(html, url, tokens){
-                            const lower=((html||'').slice(0,60000)+' '+(url||'')).toLowerCase();
+                            const h = (html||'').slice(0,80000);
+                            const lower=(h+' '+(url||'')).toLowerCase();
                             const toks=(tokens||[]).filter(t=>t.length>=2);
                             const distinctive=toks.filter(t=>/\\d/.test(t) || (t.length>=5 && !['panel','solar','inversor','bateria','baterias','cable','cables','controlador','regulador','estructura','kit','sistema'].includes(t)));
                             const dt=distinctive.length?distinctive:toks;
                             let s=0;
                             for(const t of dt){ if(lower.includes(t)) s+=2; if((url||'').toLowerCase().includes(t)) s+=3; }
-                            const title=((html||'').match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i)||[])[1]||'';
-                            const tl=title.toLowerCase();
-                            for(const t of dt){ if(tl.includes(t)) s+=4; }
-                            return s;
+                            const h1=((h.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i)||[])[1]||'').replace(/<[^>]+>/g,' ').toLowerCase();
+                            const title=((h.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)||[])[1]||'').toLowerCase();
+                            for(const t of dt){ if(h1.includes(t)) s+=5; if(title.includes(t)) s+=3; }
+                            return {score:s, hasH1: dt.some(t=>h1.includes(t)), hasUrl: dt.some(t=>(url||'').toLowerCase().includes(t))};
+                        }
+                        function stripRelated(html){
+                            return (html||'')
+                              .replace(/<(section|div)[^>]*(related|relacionad|similar|upsell|crosssell|tambien|recomendad|recently|visto)[^>]*>[\\s\\S]*?<\\/(section|div)>/gi,' ')
+                              .replace(/<(h2|h3|h4)[^>]*>[\\s\\S]*?(relacionad|similar|tambien te puede interesar|productos relacionados)[\\s\\S]*?<\\/(h2|h3|h4)>[\\s\\S]*/gi,' ');
                         }
                         function scorePrices(html, tokens, url){
-                            html = (html||'').slice(0,250000);
-                            const lower = html.toLowerCase();
+                            const rawHtml = (html||'').slice(0,250000);
+                            const mainHtml = stripRelated(rawHtml);
+                            const lower = mainHtml.toLowerCase();
                             const candidates = [];
                             const toks = (tokens||[]).filter(t=>t.length>=2);
                             const distinctive = toks.filter(t=>/\\d/.test(t) || (t.length>=5 && !['panel','solar','inversor','bateria','baterias','cable','cables','controlador','regulador','estructura','kit','sistema'].includes(t)));
                             const dt = distinctive.length ? distinctive : toks;
                             const hasModel = dt.length ? dt.some(t=>lower.includes(t)) : false;
-                            const pRel = pageRelevance(html, url, tokens);
-                            const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special,pageScore:pRel}); };
+                            const rel = pageRelevance(rawHtml, url, tokens);
+                            const pRel = rel.score;
+                            const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special,pageScore:pRel,hasH1:rel.hasH1,hasUrl:rel.hasUrl}); };
+                            // structured data from full page is ok
                             const ldRe = /"price"\\s*:\\s*"?([0-9][0-9.,]*)"?/gi;
                             let m;
-                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, hasModel?6:4, false); }
+                            while((m=ldRe.exec(rawHtml))!==null){ const raw=m[1].replace(/\\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, hasModel?7:4, false); }
                             const metaRe = /(?:product:price:amount|og:price:amount|itemprop=\\"price\\"[^>]*content=)[\\"']([0-9][0-9.,]*)[\\"']/gi;
-                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, hasModel?6:4, false); }
+                            while((m=metaRe.exec(rawHtml))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, hasModel?7:4, false); }
+                            // text prices from main area only
                             priceRe.lastIndex=0;
-                            while((m=priceRe.exec(html))!==null){
+                            while((m=priceRe.exec(mainHtml))!==null){
                                 const raw=m[1].replace(/\\./g,'');
                                 const val=parseInt(raw,10);
                                 if(!(val>=5000&&val<=20000000)) continue;
-                                const ctx = html.slice(Math.max(0,m.index-140), m.index+80).toLowerCase();
+                                const ctx = mainHtml.slice(Math.max(0,m.index-160), m.index+80).toLowerCase();
                                 let score = 1; let special=false;
                                 if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)){ score += 3; special=true; }
                                 if(/precio|price|valor/.test(ctx)) score += 2;
@@ -1153,20 +1163,20 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                     const near = dt.filter(t=>ctx.includes(t)).length;
                                     if(near>0) score += 6 + Math.min(near,3)*2;
                                     else if(hasModel) score += 1;
-                                    else score -= 4;
+                                    else score -= 5;
                                 }
-                                if(/relacionad|similar|tambien|recomendad|visto recientemente|otros productos/.test(ctx)) score -= 3;
                                 add(val, score, special);
                             }
                             return candidates;
                         }
                         function pickBest(candidates){
                             if(!candidates.length) return 0;
-                            // prefer candidates from the most relevant product page
                             const maxPage = Math.max(...candidates.map(c=>c.pageScore||0));
                             let poolAll = candidates;
                             if(maxPage >= 4){
-                                const bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2);
+                                // keep only best-matching product pages
+                                let bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2 && (c.hasH1 || c.hasUrl || (c.pageScore||0)>=maxPage));
+                                if(!bestPage.length) bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2);
                                 if(bestPage.length) poolAll = bestPage;
                             }
                             const specials = poolAll.filter(c=>c.special && c.val>=10000);
