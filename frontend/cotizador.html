@@ -965,17 +965,22 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
             estado.textContent = 'Iniciando búsqueda...';
             let watchdog = null;
+            let watchdogIv = null;
+            const startedAt = Date.now();
             const finalizarUI = (msg) => {
                 if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+                if (watchdogIv) { clearInterval(watchdogIv); watchdogIv = null; }
                 _busquedaAbort = null;
                 btn.textContent = '🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE';
                 btn.disabled = false;
                 btn.classList.remove('buscando');
                 if (msg) estado.textContent = msg;
             };
-            watchdog = setTimeout(() => {
+            const forceTimeout = () => {
                 if (_busquedaAbort === ctrl) { try { ctrl.abort(); } catch(_){} finalizarUI('Búsqueda cancelada por tiempo. Intenta de nuevo.'); }
-            }, 70000);
+            };
+            watchdog = setTimeout(forceTimeout, 70000);
+            watchdogIv = setInterval(() => { if (Date.now() - startedAt > 75000) forceTimeout(); }, 5000);
             try {
                 const apiKey = '';
                 const queryBusqueda = enriquecerQuery(desc);
