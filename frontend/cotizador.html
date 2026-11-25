@@ -1087,7 +1087,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                 const domMatch = targetSearchUrl.match(/site:([^+&\\s]+)/i);
                                 const domain = domMatch ? domMatch[1].replace(/^www\\./,'') : '';
                                 if(domain){
-                                    const linkRe = new RegExp('https?:\\/\\/(?:www\\.)?'+domain.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+'[^"\\s<>]*','ig');
+                                    const linkRe = new RegExp('https?:\\/\\/(?:www\\.)?'+domain.replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&')+'[^"\\s<>]*','ig');
                                     const links = [...new Set((html.match(linkRe)||[]))].filter(u=>!/google\\.|\\/search/i.test(u)).slice(0,2);
                                     for(const link of links){
                                         try { const h2 = await fetchHtml(link); precios = precios.concat(extractPrices(h2)); } catch(_e){}
