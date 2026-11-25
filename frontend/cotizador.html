@@ -1096,7 +1096,11 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             if(!candidates.length) return 0;
                             // prefer explicit special/offer prices
                             const specials = candidates.filter(c=>c.special && c.val>=10000);
-                            if(specials.length){ specials.sort((a,b)=>b.score-a.score||a.val-b.val); return specials[0].val; }
+                            if(specials.length){
+                                const freq={}; specials.forEach(c=>{freq[c.val]=(freq[c.val]||0)+1;});
+                                specials.sort((a,b)=>b.score-a.score||(freq[b.val]-freq[a.val])||b.val-a.val);
+                                return specials[0].val;
+                            }
                             candidates.sort((a,b)=>b.score-a.score || b.val-a.val);
                             const topScore=candidates[0].score;
                             const top=candidates.filter(c=>c.score>=topScore-1 && c.val>=10000);
