@@ -952,7 +952,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
             const contenedor = document.getElementById('resultadosPrecios');
             btn.textContent = '⏳ Buscando precios en tiendas de Chile...';
             btn.disabled = true;
-            const _watchdog = setTimeout(()=>{ if(btn.disabled){ btn.textContent='🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE'; btn.disabled=false; if(!estado.textContent) estado.textContent='Búsqueda tardó demasiado. Intenta de nuevo.'; } }, 35000);
+            const _watchdog = setTimeout(()=>{ if(btn.disabled){ btn.textContent='🔍 BUSCAR PRECIOS EN TIENDAS DE CHILE'; btn.disabled=false; if(!estado.textContent) estado.textContent='Búsqueda tardó demasiado. Intenta de nuevo.'; } }, 60000);
             document.getElementById('errorPrecioProducto').classList.remove('visible');
             contenedor.innerHTML = '<p style="color:#888;text-align:center">Consultando tiendas (resultados progresivos)...</p>';
             const apiKey = ''; // Scraper interno por backend
@@ -991,7 +991,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                     let tarea = tienda.dominio
                         ? buscarTiendaConProxy(queryBusqueda, tienda.dominio, apiKey, timeoutMs)
                         : buscarGenericoChile(queryBusqueda, apiKey, timeoutMs);
-                    const val = await Promise.race([tarea, new Promise(res => setTimeout(() => res(0), 20000))]);
+                    const val = await Promise.race([tarea, new Promise(res => setTimeout(() => res(0), 50000))]);
                     completados++;
                     if (val > 0) { encontrados.push({ tienda: tienda.nombre, key: tienda.key, valor: val, fuente: 'Búsqueda web' }); renderParcial(); }
                     actualizarProgreso();
@@ -1127,16 +1127,20 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const urlsToTry = [targetSearchUrl];
                             if(domain){
                                 const dq = encodeURIComponent(qClean.slice(0,80));
+                                urlsToTry.push('https://html.duckduckgo.com/html/?q='+encodeURIComponent(qClean.slice(0,60)+' '+domain+' precio Chile'));
                                 urlsToTry.push('https://www.'+domain+'/catalogsearch/result/?q='+dq);
                                 urlsToTry.push('https://www.'+domain+'/search?q='+dq);
                                 urlsToTry.push('https://www.'+domain+'/?s='+dq);
                             }
-                            for(const u of urlsToTry.slice(0,4)){
+                            for(const u of urlsToTry.slice(0,5)){
                                 try{
                                     const html = await fetchHtml(u);
                                     candidates = candidates.concat(scorePrices(html));
                                     if(domain){
-                                        const links = extractLinks(html, domain).slice(0,3);
+                                        let links = extractLinks(html, domain);
+                                        const qTokens=qClean.toLowerCase().split(/[^a-z0-9]+/i).filter(t=>t.length>=3);
+                                        links.sort((a,b)=>{ const sa=qTokens.filter(t=>a.toLowerCase().includes(t)).length; const sb=qTokens.filter(t=>b.toLowerCase().includes(t)).length; return sb-sa; });
+                                        links = links.slice(0,3);
                                         for(const link of links){
                                             try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2)); }catch(_e){}
                                             if(pickBest(candidates)>=10000) break;
@@ -1222,7 +1226,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         if (precios.length > 0) return Math.min(...precios);
                     }
                 } else {
-                    const val = await buscarPrecioEnWorker(targetSearchUrl, 20000);
+                    const val = await buscarPrecioEnWorker(targetSearchUrl, 45000);
                     if (val > 0) return val;
                 }
             } catch(e) { console.warn(dominio+':', e.message); }
@@ -1248,7 +1252,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         if (precios.length > 0) return Math.min(...precios);
                     }
                 } else {
-                    const val = await buscarPrecioEnWorker(targetSearchUrl, 20000);
+                    const val = await buscarPrecioEnWorker(targetSearchUrl, 45000);
                     if (val > 0) return val;
                 }
             } catch(e) { console.warn('generico:', e.message); }
