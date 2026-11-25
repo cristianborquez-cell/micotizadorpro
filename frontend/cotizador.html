@@ -1112,14 +1112,28 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         const ctrl = new AbortController();
                         const t = setTimeout(()=>ctrl.abort(), timeoutMs);
                         const priceRe = /\\$\\s*([0-9]{1,3}(?:\\.[0-9]{3})+|[0-9]{4,7})/g;
-                        function scorePrices(html, tokens){
+                        function pageRelevance(html, url, tokens){
+                            const lower=((html||'').slice(0,60000)+' '+(url||'')).toLowerCase();
+                            const toks=(tokens||[]).filter(t=>t.length>=2);
+                            const distinctive=toks.filter(t=>/\\d/.test(t) || (t.length>=5 && !['panel','solar','inversor','bateria','baterias','cable','cables','controlador','regulador','estructura','kit','sistema'].includes(t)));
+                            const dt=distinctive.length?distinctive:toks;
+                            let s=0;
+                            for(const t of dt){ if(lower.includes(t)) s+=2; if((url||'').toLowerCase().includes(t)) s+=3; }
+                            const title=((html||'').match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i)||[])[1]||'';
+                            const tl=title.toLowerCase();
+                            for(const t of dt){ if(tl.includes(t)) s+=4; }
+                            return s;
+                        }
+                        function scorePrices(html, tokens, url){
                             html = (html||'').slice(0,250000);
                             const lower = html.toLowerCase();
                             const candidates = [];
                             const toks = (tokens||[]).filter(t=>t.length>=2);
                             const distinctive = toks.filter(t=>/\\d/.test(t) || (t.length>=5 && !['panel','solar','inversor','bateria','baterias','cable','cables','controlador','regulador','estructura','kit','sistema'].includes(t)));
-                            const hasModel = distinctive.length ? distinctive.some(t=>lower.includes(t)) : toks.some(t=>lower.includes(t));
-                            const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special}); };
+                            const dt = distinctive.length ? distinctive : toks;
+                            const hasModel = dt.length ? dt.some(t=>lower.includes(t)) : false;
+                            const pRel = pageRelevance(html, url, tokens);
+                            const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special,pageScore:pRel}); };
                             const ldRe = /"price"\\s*:\\s*"?([0-9][0-9.,]*)"?/gi;
                             let m;
                             while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, hasModel?6:4, false); }
@@ -1130,35 +1144,41 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                 const raw=m[1].replace(/\\./g,'');
                                 const val=parseInt(raw,10);
                                 if(!(val>=5000&&val<=20000000)) continue;
-                                const ctx = html.slice(Math.max(0,m.index-120), m.index+60).toLowerCase();
+                                const ctx = html.slice(Math.max(0,m.index-140), m.index+80).toLowerCase();
                                 let score = 1; let special=false;
                                 if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)){ score += 3; special=true; }
                                 if(/precio|price|valor/.test(ctx)) score += 2;
                                 if(/normal|antes|tachado|lista|regular|cuota|envio|despacho|shipping|usd|uf/.test(ctx)) score -= 3;
-                                const dtoks = distinctive.length ? distinctive : toks;
-                                if(dtoks.length){
-                                    const near = dtoks.filter(t=>ctx.includes(t)).length;
-                                    if(near>0) score += 5 + Math.min(near,3)*2;
+                                if(dt.length){
+                                    const near = dt.filter(t=>ctx.includes(t)).length;
+                                    if(near>0) score += 6 + Math.min(near,3)*2;
                                     else if(hasModel) score += 1;
-                                    else score -= 3;
+                                    else score -= 4;
                                 }
+                                if(/relacionad|similar|tambien|recomendad|visto recientemente|otros productos/.test(ctx)) score -= 3;
                                 add(val, score, special);
                             }
                             return candidates;
                         }
                         function pickBest(candidates){
                             if(!candidates.length) return 0;
-                            // prefer explicit special/offer prices
-                            const specials = candidates.filter(c=>c.special && c.val>=10000);
+                            // prefer candidates from the most relevant product page
+                            const maxPage = Math.max(...candidates.map(c=>c.pageScore||0));
+                            let poolAll = candidates;
+                            if(maxPage >= 4){
+                                const bestPage = candidates.filter(c=>(c.pageScore||0) >= maxPage-2);
+                                if(bestPage.length) poolAll = bestPage;
+                            }
+                            const specials = poolAll.filter(c=>c.special && c.val>=10000);
                             if(specials.length){
                                 const freq={}; specials.forEach(c=>{freq[c.val]=(freq[c.val]||0)+1;});
                                 specials.sort((a,b)=>b.score-a.score||(freq[b.val]-freq[a.val])||b.val-a.val);
                                 return specials[0].val;
                             }
-                            candidates.sort((a,b)=>b.score-a.score || b.val-a.val);
-                            const topScore=candidates[0].score;
-                            const top=candidates.filter(c=>c.score>=topScore-1 && c.val>=10000);
-                            const pool=top.length?top:candidates;
+                            poolAll.sort((a,b)=>b.score-a.score || b.val-a.val);
+                            const topScore=poolAll[0].score;
+                            const top=poolAll.filter(c=>c.score>=topScore-1 && c.val>=10000);
+                            const pool=top.length?top:poolAll;
                             pool.sort((a,b)=>b.score-a.score||b.val-a.val);
                             return pool[0].val;
                         }
@@ -1197,13 +1217,13 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             for(const u of urlsToTry.slice(0,4)){
                                 try{
                                     const html = await fetchHtml(u);
-                                    candidates = candidates.concat(scorePrices(html, qTokens));
+                                    candidates = candidates.concat(scorePrices(html, qTokens, u));
                                     if(domain){
                                         let links = extractLinks(html, domain);
                                         links.sort((a,b)=>{ const sa=qTokens.filter(t=>a.toLowerCase().includes(t)).length; const sb=qTokens.filter(t=>b.toLowerCase().includes(t)).length; return sb-sa; });
                                         links = links.slice(0,2);
                                         for(const link of links){
-                                            try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2, qTokens)); }catch(_e){}
+                                            try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2, qTokens, link)); }catch(_e){}
                                             if(candidates.some(c=>c.special&&c.val>=10000)) break;
                                         }
                                     }
