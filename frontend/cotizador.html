@@ -1068,7 +1068,54 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         const {targetSearchUrl, token, timeoutMs, endpoint} = e.data;
                         const ctrl = new AbortController();
                         const t = setTimeout(()=>ctrl.abort(), timeoutMs);
-                        const priceRe = /\\$\\s*([0-9]{1,3}(?:\\.[0-9]{3})+)/g;
+                        const priceRe = /\$\s*([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]{4,7})/g;
+                        function scorePrices(html){
+                            html = (html||'').slice(0,250000);
+                            const candidates = [];
+                            const add = (val, score, src) => { if(val>=5000 && val<=20000000) candidates.push({val,score,src}); };
+                            // JSON-LD / structured
+                            const ldRe = /"price"\s*:\s*"?([0-9][0-9.,]*)"?/gi;
+                            let m;
+                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, 6, 'ld'); }
+                            const metaRe = /(?:product:price:amount|og:price:amount|itemprop="price"[^>]*content=)["']([0-9][0-9.,]*)["']/gi;
+                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, 6, 'meta'); }
+                            // CLP formatted with context
+                            priceRe.lastIndex=0;
+                            while((m=priceRe.exec(html))!==null){
+                                const raw=m[1].replace(/\./g,'');
+                                const val=parseInt(raw,10);
+                                if(!(val>=5000&&val<=20000000)) continue;
+                                const ctx = html.slice(Math.max(0,m.index-80), m.index+40).toLowerCase();
+                                let score = 1;
+                                if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)) score += 3;
+                                if(/precio|price|valor/.test(ctx)) score += 2;
+                                if(/normal|antes|tachado|lista|regular|cuota|envio|despacho|shipping|usd|uf/.test(ctx)) score -= 3;
+                                add(val, score, 'txt');
+                            }
+                            return candidates;
+                        }
+                        function pickBest(candidates){
+                            if(!candidates.length) return 0;
+                            // prefer structured/special prices; among equals prefer plausible product price (max of top-scored)
+                            candidates.sort((a,b)=>b.score-a.score || b.val-a.val);
+                            const topScore = candidates[0].score;
+                            const top = candidates.filter(c=>c.score>=topScore-1 && c.val>=10000);
+                            if(top.length) return top.sort((a,b)=>b.score-a.score || b.val-a.val)[0].val;
+                            return candidates[0].val;
+                        }
+                        async function fetchHtml(url){
+                            const r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json', ...(token?{'Authorization':'Bearer '+token}:{})}, body:JSON.stringify({url}), signal:ctrl.signal});
+                            const d = await r.json().catch(()=>({}));
+                            return (d && d.content) ? String(d.content) : '';
+                        }
+                        try {
+                            let html = await fetchHtml(targetSearchUrl);
+                            let candidates = scorePrices(html);
+                            // Always follow domain links for site-specific searches to get product page
+                            const domMatch = targetSearchUrl.match(/site:([^+&\s]+)/i);
+                            const domain = domMatch ? domMatch[1].replace(/^www\./,'') : '';
+                            if(domain){
+                                const linkRe = new RegExp('https?:\/\/(?:www\.)?'+domain.replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\                        const priceRe = /\\$\\s*([0-9]{1,3}(?:\\.[0-9]{3})+)/g;
                         function extractPrices(html){
                             html = (html||'').slice(0,200000);
                             let m, precios=[]; priceRe.lastIndex=0;
@@ -1095,7 +1142,14 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                 }
                             }
                             clearTimeout(t);
-                            self.postMessage({ok:true, valor: precios.length?Math.min(...precios):0});
+                            self.postMessage({ok:true, valor: precios.length?Math.min(...precios):0});')+'[^"\s<>]*','ig');
+                                const links = [...new Set((html.match(linkRe)||[]))].filter(u=>!/google\.|\/search/i.test(u)).slice(0,3);
+                                for(const link of links){
+                                    try { const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2)); } catch(_e){}
+                                }
+                            }
+                            clearTimeout(t);
+                            self.postMessage({ok:true, valor: pickBest(candidates)});
                         } catch(err) {
                             clearTimeout(t);
                             self.postMessage({ok:false, valor:0});
