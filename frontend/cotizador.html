@@ -1072,28 +1072,31 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         function scorePrices(html){
                             html = (html||'').slice(0,250000);
                             const candidates = [];
-                            const add = (val, score) => { if(val>=5000 && val<=20000000) candidates.push({val,score}); };
+                            const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special}); };
                             const ldRe = /"price"\s*:\s*"?([0-9][0-9.,]*)"?/gi;
                             let m;
-                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, 6); }
+                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, 5, false); }
                             const metaRe = /(?:product:price:amount|og:price:amount|itemprop=\"price\"[^>]*content=)[\"']([0-9][0-9.,]*)[\"']/gi;
-                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, 6); }
+                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, 5, false); }
                             priceRe.lastIndex=0;
                             while((m=priceRe.exec(html))!==null){
                                 const raw=m[1].replace(/\./g,'');
                                 const val=parseInt(raw,10);
                                 if(!(val>=5000&&val<=20000000)) continue;
                                 const ctx = html.slice(Math.max(0,m.index-80), m.index+40).toLowerCase();
-                                let score = 1;
-                                if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)) score += 3;
+                                let score = 1; let special=false;
+                                if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)){ score += 3; special=true; }
                                 if(/precio|price|valor/.test(ctx)) score += 2;
                                 if(/normal|antes|tachado|lista|regular|cuota|envio|despacho|shipping|usd|uf/.test(ctx)) score -= 3;
-                                add(val, score);
+                                add(val, score, special);
                             }
                             return candidates;
                         }
                         function pickBest(candidates){
                             if(!candidates.length) return 0;
+                            // prefer explicit special/offer prices
+                            const specials = candidates.filter(c=>c.special && c.val>=10000);
+                            if(specials.length){ specials.sort((a,b)=>b.score-a.score||a.val-b.val); return specials[0].val; }
                             candidates.sort((a,b)=>b.score-a.score || b.val-a.val);
                             const topScore=candidates[0].score;
                             const top=candidates.filter(c=>c.score>=topScore-1 && c.val>=10000);
