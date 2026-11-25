@@ -1127,15 +1127,13 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const qMatch = targetSearchUrl.match(/[?&]q=([^&]+)/i);
                             const qRaw = qMatch ? decodeURIComponent(qMatch[1].replace(/\+/g,' ')) : '';
                             const qClean = qRaw.replace(/site:\S+/gi,'').replace(/precio Chile/gi,'').trim();
-                            const urlsToTry = [targetSearchUrl];
+                            let urlsToTry = [targetSearchUrl];
                             if(domain){
                                 const dq = encodeURIComponent(qClean.slice(0,80));
-                                urlsToTry.push('https://html.duckduckgo.com/html/?q='+encodeURIComponent(qClean.slice(0,60)+' '+domain+' precio Chile'));
-                                urlsToTry.push('https://www.'+domain+'/catalogsearch/result/?q='+dq);
-                                urlsToTry.push('https://www.'+domain+'/search?q='+dq);
-                                urlsToTry.push('https://www.'+domain+'/?s='+dq);
+                                const broad = 'https://html.duckduckgo.com/html/?q='+encodeURIComponent(qClean.slice(0,60)+' '+domain+' precio Chile');
+                                urlsToTry = [broad, targetSearchUrl, 'https://www.'+domain+'/?s='+dq, 'https://www.'+domain+'/catalogsearch/result/?q='+dq];
                             }
-                            for(const u of urlsToTry.slice(0,5)){
+                            for(const u of urlsToTry.slice(0,4)){
                                 try{
                                     const html = await fetchHtml(u);
                                     candidates = candidates.concat(scorePrices(html));
@@ -1143,13 +1141,13 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                                         let links = extractLinks(html, domain);
                                         const qTokens=qClean.toLowerCase().split(/[^a-z0-9]+/i).filter(t=>t.length>=3);
                                         links.sort((a,b)=>{ const sa=qTokens.filter(t=>a.toLowerCase().includes(t)).length; const sb=qTokens.filter(t=>b.toLowerCase().includes(t)).length; return sb-sa; });
-                                        links = links.slice(0,3);
+                                        links = links.slice(0,2);
                                         for(const link of links){
                                             try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2)); }catch(_e){}
-                                            if(pickBest(candidates)>=10000) break;
+                                            if(candidates.some(c=>c.special&&c.val>=10000)) break;
                                         }
                                     }
-                                    if(pickBest(candidates)>=10000) break;
+                                    if(candidates.some(c=>c.special&&c.val>=10000)) break;
                                 }catch(_e){}
                             }
                             clearTimeout(t);
