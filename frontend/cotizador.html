@@ -1112,25 +1112,34 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                         const ctrl = new AbortController();
                         const t = setTimeout(()=>ctrl.abort(), timeoutMs);
                         const priceRe = /\\$\\s*([0-9]{1,3}(?:\\.[0-9]{3})+|[0-9]{4,7})/g;
-                        function scorePrices(html){
+                        function scorePrices(html, tokens){
                             html = (html||'').slice(0,250000);
+                            const lower = html.toLowerCase();
                             const candidates = [];
+                            const toks = (tokens||[]).filter(t=>t.length>=2);
+                            const hasModel = toks.length ? toks.some(t=>lower.includes(t)) : false;
                             const add = (val, score, special) => { if(val>=5000 && val<=20000000) candidates.push({val,score,special:!!special}); };
                             const ldRe = /"price"\\s*:\\s*"?([0-9][0-9.,]*)"?/gi;
                             let m;
-                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, 5, false); }
+                            while((m=ldRe.exec(html))!==null){ const raw=m[1].replace(/\\./g,'').replace(',','.'); const val=parseInt(raw,10); if(val>0) add(val, hasModel?6:4, false); }
                             const metaRe = /(?:product:price:amount|og:price:amount|itemprop=\\"price\\"[^>]*content=)[\\"']([0-9][0-9.,]*)[\\"']/gi;
-                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, 5, false); }
+                            while((m=metaRe.exec(html))!==null){ const val=parseInt(m[1].replace(/[.,]/g,''),10); if(val>0) add(val, hasModel?6:4, false); }
                             priceRe.lastIndex=0;
                             while((m=priceRe.exec(html))!==null){
                                 const raw=m[1].replace(/\\./g,'');
                                 const val=parseInt(raw,10);
                                 if(!(val>=5000&&val<=20000000)) continue;
-                                const ctx = html.slice(Math.max(0,m.index-80), m.index+40).toLowerCase();
+                                const ctx = html.slice(Math.max(0,m.index-120), m.index+60).toLowerCase();
                                 let score = 1; let special=false;
                                 if(/especial|oferta|actual|sale|now|internet|transferencia|efectivo/.test(ctx)){ score += 3; special=true; }
                                 if(/precio|price|valor/.test(ctx)) score += 2;
                                 if(/normal|antes|tachado|lista|regular|cuota|envio|despacho|shipping|usd|uf/.test(ctx)) score -= 3;
+                                if(toks.length){
+                                    const near = toks.filter(t=>ctx.includes(t)).length;
+                                    if(near>0) score += 4 + Math.min(near,3);
+                                    else if(hasModel) score += 1;
+                                    else score -= 2;
+                                }
                                 add(val, score, special);
                             }
                             return candidates;
@@ -1174,6 +1183,7 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             const qMatch = targetSearchUrl.match(/[?&]q=([^&]+)/i);
                             const qRaw = qMatch ? decodeURIComponent(qMatch[1].replace(/\\+/g,' ')) : '';
                             const qClean = qRaw.replace(/site:\\S+/gi,'').replace(/precio Chile/gi,'').trim();
+                            const qTokens=qClean.toLowerCase().split(/[^a-z0-9]+/i).filter(t=>t.length>=2 && !['precio','chile','para','con','del','las','los','una','por'].includes(t));
                             let urlsToTry = [targetSearchUrl];
                             if(domain){
                                 const dq = encodeURIComponent(qClean.slice(0,80));
@@ -1185,14 +1195,13 @@ body.apk-mode #autosaveStatus{font-size:.52rem !important}
                             for(const u of urlsToTry.slice(0,4)){
                                 try{
                                     const html = await fetchHtml(u);
-                                    candidates = candidates.concat(scorePrices(html));
+                                    candidates = candidates.concat(scorePrices(html, qTokens));
                                     if(domain){
                                         let links = extractLinks(html, domain);
-                                        const qTokens=qClean.toLowerCase().split(/[^a-z0-9]+/i).filter(t=>t.length>=3);
                                         links.sort((a,b)=>{ const sa=qTokens.filter(t=>a.toLowerCase().includes(t)).length; const sb=qTokens.filter(t=>b.toLowerCase().includes(t)).length; return sb-sa; });
                                         links = links.slice(0,2);
                                         for(const link of links){
-                                            try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2)); }catch(_e){}
+                                            try{ const h2 = await fetchHtml(link); candidates = candidates.concat(scorePrices(h2, qTokens)); }catch(_e){}
                                             if(candidates.some(c=>c.special&&c.val>=10000)) break;
                                         }
                                     }
